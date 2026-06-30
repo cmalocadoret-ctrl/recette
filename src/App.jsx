@@ -1,484 +1,658 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, BookOpen, ChefHat, Maximize, RotateCcw, Sparkles, X } from 'lucide-react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { ContactShadows, Html, RoundedBox } from '@react-three/drei'
-import * as THREE from 'three'
+import { ArrowLeft, ArrowRight, BookOpen, ChefHat, Maximize, RotateCcw, X } from 'lucide-react'
 
-/* =========================================================================
-   DONNÉES (script entièrement filé "recette")
-   ========================================================================= */
-const sections = [
-  { id: 'intro', label: 'La carte' },
-  { id: 'method', label: 'La mise en place' },
-  { id: 'ingredients', label: 'Les ingrédients' },
-  { id: 'transform', label: 'La cuisson' },
-  { id: 'dressage', label: 'Le dressage' },
-  { id: 'final', label: 'Le service' }
+const SCENES = [
+  { id: 'intro', nav: 'Accueil', eyebrow: 'Scène 01 · Entrée en matière' },
+  { id: 'mise-en-place', nav: 'Mise en place', eyebrow: 'Scène 02 · Mise en place' },
+  { id: 'ingredients', nav: 'Ingrédients', eyebrow: 'Scène 03 · Ingrédients' },
+  { id: 'cuisson', nav: 'Cuisson', eyebrow: 'Scène 04 · Cuisson' },
+  { id: 'dressage', nav: 'Dressage', eyebrow: 'Scène 05 · Dressage' },
 ]
 
-const notes = {
-  intro: { title: 'La carte', body: "On ouvre comme une carte de restaurant : une année de logistique racontée en recette. On choisit les ingrédients, on les fait mijoter, puis on dresse une logistique plus lisible, fiable et pilotée." },
-  method: { title: 'La mise en place', body: "Avant d'allumer le feu, on prépare le plan de travail : vision globale des flux, fiabilisation terrain, donnée utile, et le réflexe de goûter le terrain avant d'assaisonner." },
-  ingredients: { title: 'Les ingrédients', body: "Chaque donnée est un ingrédient. Au clic, l'ingrédient tombe réellement dans la marmite (3D) : séparés ce sont des données éparses, réunis ils deviennent une base de pilotage." },
-  transform: { title: 'La cuisson', body: "On laisse mijoter puis on passe au four : observer, cartographier, structurer, tester, standardiser. La chaleur transforme les constats terrain en décisions." },
-  dressage: { title: 'Le dressage', body: "On soulève le couvercle et on dresse : moins d'erreurs, meilleure visibilité, décisions plus rapides, standards partageables, logistique robuste pour le portage." },
-  final: { title: 'Le service', body: "Le mot de la fin : avant d'optimiser une organisation, il faut d'abord rendre ses flux lisibles, ses données fiables et ses pratiques partageables." }
+const NOTES = {
+  intro: {
+    title: 'Ouverture',
+    text:
+      "Bonjour à tous. J’ai choisi de présenter mon année sous la forme d’une recette, parce que chez Ansamble, un bon résultat dépend toujours du bon dosage : les bons ingrédients, une méthode claire, et une exécution rigoureuse sur le terrain. Mon fil rouge cette année a été simple : rendre les flux plus lisibles, les données plus fiables, et les pratiques plus faciles à partager entre les sites."
+  },
+  'mise-en-place': {
+    title: 'La mise en place',
+    text:
+      "Avant de cuisiner, il faut préparer le plan de travail. Pour moi, cela correspond aux grands axes de l’année : mieux comprendre les flux du Grand Ouest, fiabiliser le terrain autour du portage de repas, rendre la donnée vraiment utile, et surtout observer avant d’optimiser. L’idée n’est pas de plaquer une solution, mais de comprendre le terrain avant de proposer des standards."
+  },
+  ingredients: {
+    title: 'Les ingrédients',
+    text:
+      "Dans cette scène, chaque ingrédient représente une donnée ou une contrainte logistique : les clients, les volumes, les tournées, les régimes et menus, puis les indicateurs. Séparément, ce sont des informations dispersées. Une fois réunies, elles deviennent une base de pilotage capable d’aider à mieux préparer, mieux livrer et mieux décider."
+  },
+  cuisson: {
+    title: 'La cuisson',
+    text:
+      "La cuisson représente le travail méthode : on part de constats terrain, on cartographie les flux, on structure les données, on teste des scénarios, puis on transforme ce travail en standards plus robustes. C’est le passage entre l’observation et la décision opérationnelle."
+  },
+  dressage: {
+    title: 'Le dressage',
+    text:
+      "Le dressage final correspond aux bénéfices attendus : moins d’erreurs sur le terrain, une meilleure visibilité des flux, des décisions plus rapides, et des standards plus faciles à partager entre les sites. Cette année m’a surtout montré qu’avant d’optimiser une organisation, il faut rendre ses flux lisibles, ses données fiables et ses pratiques partageables."
+  }
 }
 
-const ingredientData = [
-  { id: 'clients',  shape: 'peas',   color: '#6f9a4e', number: '01', label: 'Données clients',     text: "Qui livrer, à quelle maille, jusqu'au bénéficiaire final. La base de toute la recette.", link: 'Le point de départ', rest: [-2.6, 1.7, 0.5] },
-  { id: 'volumes',  shape: 'carrot', color: '#d4742b', number: '02', label: 'Volumes repas',       text: "La charge à produire et sa répartition : le dosage qui équilibre ateliers et tournées.", link: 'Réorganisation Grand Ouest', rest: [2.55, 1.85, -0.2] },
-  { id: 'tournees', shape: 'herb',   color: '#5d8a3f', number: '03', label: 'Tournées multi-sites', text: "Géographie, temps, capacités : passer d'une vision locale à une vision globale et pilotée.", link: 'Réorganisation Grand Ouest', rest: [2.75, 0.55, 0.7] },
-  { id: 'menus',    shape: 'onion',  color: '#e7d9b8', number: '04', label: 'Régimes & menus',      text: "Composition des sacs, choix de menu, régimes : la finesse, au cœur de la digitalisation du portage.", link: 'Digitalisation du portage', rest: [-2.75, 0.5, -0.4] },
-  { id: 'kpi',      shape: 'grains', color: '#c79a3c', number: '05', label: 'KPI & référentiels',   text: "Erreurs, coûts, temps opérationnels : des indicateurs partagés pour mesurer et comparer.", link: 'Donnée & pilotage', rest: [0.1, 2.15, -1.1] }
+const METHOD_ITEMS = [
+  {
+    number: '01',
+    title: 'Vision globale des flux',
+    text: 'Réorganisation logistique Grand Ouest et lecture multi-sites des volumes, clients et tournées.'
+  },
+  {
+    number: '02',
+    title: 'Fiabilisation terrain',
+    text: 'Digitalisation du portage de repas pour sécuriser la préparation sans complexifier l’opérationnel.'
+  },
+  {
+    number: '03',
+    title: 'Donnée utile',
+    text: 'Référentiels fiables, indicateurs communs et base solide pour piloter les décisions.'
+  },
+  {
+    number: '04',
+    title: 'Observer avant d’optimiser',
+    text: 'Aller au terrain, cartographier les flux réels, tester puis seulement standardiser.'
+  },
 ]
 
-const methodItems = [
-  ['01', 'Dresser le plan de travail', 'Vision globale des flux', "Clients, volumes, tournées et arbitrages multi-sites posés à plat avant de cuisiner."],
-  ['02', 'Sécuriser le tour de main', 'Fiabilisation terrain', "Guider la préparation, sécuriser les sacs du portage et réduire les écarts."],
-  ['03', 'Peser les bons ingrédients', 'Donnée utile et partageable', "Passer de fichiers dispersés à des référentiels réellement exploitables."],
-  ['04', 'Goûter avant d’assaisonner', 'Observer avant d’optimiser', "Terrain, cartographie, scénarios, décision, puis standardisation."]
+const INGREDIENTS = [
+  {
+    id: 'clients',
+    number: '01',
+    label: 'Données clients',
+    caption: 'Qui livrer, à quelle maille, client final ou bénéficiaire.',
+    type: 'peas',
+    position: 'pos-a'
+  },
+  {
+    id: 'volumes',
+    number: '02',
+    label: 'Volumes repas',
+    caption: 'Charge, répartition et équilibre entre sites.',
+    type: 'carrot',
+    position: 'pos-b'
+  },
+  {
+    id: 'routes',
+    number: '03',
+    label: 'Tournées multi-sites',
+    caption: 'Géographie, temps, capacités et organisation des flux.',
+    type: 'route',
+    position: 'pos-c'
+  },
+  {
+    id: 'menus',
+    number: '04',
+    label: 'Régimes & menus',
+    caption: 'Composition des sacs, choix menus et sécurité de préparation.',
+    type: 'herb',
+    position: 'pos-d'
+  },
+  {
+    id: 'kpi',
+    number: '05',
+    label: 'KPI & référentiels',
+    caption: 'Erreurs, coûts, temps opérationnels et indicateurs de pilotage.',
+    type: 'grain',
+    position: 'pos-e'
+  },
 ]
 
-const transformSteps = ['Observer', 'Cartographier', 'Structurer', 'Tester', 'Standardiser']
+const BENEFITS = [
+  'Moins d’erreurs terrain',
+  'Meilleure visibilité des flux',
+  'Décisions plus rapides',
+  'Standards partageables',
+  'Logistique plus robuste pour le portage'
+]
 
-/* =========================================================================
-   HELPERS 3D
-   ========================================================================= */
-const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2)
-function quadBezier(a, c, b, t) {
-  const u = 1 - t
-  return new THREE.Vector3(
-    u * u * a.x + 2 * u * t * c.x + t * t * b.x,
-    u * u * a.y + 2 * u * t * c.y + t * t * b.y,
-    u * u * a.z + 2 * u * t * c.z + t * t * b.z
-  )
-}
+const COOKING_STEPS = ['Observer', 'Cartographier', 'Structurer', 'Tester', 'Standardiser']
 
-function SceneLights({ warm = false }) {
-  return (
-    <>
-      <ambientLight intensity={warm ? 0.45 : 0.62} />
-      <directionalLight position={[4, 7, 5]} intensity={warm ? 0.7 : 1.05} color={warm ? '#ffd9a0' : '#fff6e9'} />
-      <directionalLight position={[-6, 3, -3]} intensity={0.4} color="#ffd9a8" />
-      <pointLight position={[0, 3, 2]} intensity={warm ? 0.5 : 0.3} color="#ffcaa0" />
-    </>
-  )
-}
-
-/* ---- Marmite émaillée (LatheGeometry) ---- */
-function Marmite({ color = '#2e4736', broth = true, scale = 1 }) {
-  const geo = useMemo(() => {
-    const pts = [
-      [0.0, 0.06], [0.5, 0.0], [0.95, 0.06], [1.14, 0.5], [1.09, 1.06], [1.0, 1.26],
-      [1.15, 1.34], [1.06, 1.43], [0.96, 1.36], [0.9, 1.2], [0.86, 0.55], [0.5, 0.42], [0.0, 0.4]
-    ].map(([x, y]) => new THREE.Vector2(x, y))
-    return new THREE.LatheGeometry(pts, 72)
-  }, [])
-  return (
-    <group scale={scale}>
-      <mesh geometry={geo}>
-        <meshStandardMaterial color={color} roughness={0.3} metalness={0.12} side={THREE.DoubleSide} />
-      </mesh>
-      {broth && (
-        <mesh position={[0, 0.54, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <circleGeometry args={[0.84, 48]} />
-          <meshStandardMaterial color="#c8612f" roughness={0.5} emissive="#7a3015" emissiveIntensity={0.18} />
-        </mesh>
-      )}
-      {[1, -1].map((s) => (
-        <mesh key={s} position={[s * 1.12, 1.02, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[0.17, 0.05, 14, 28]} />
-          <meshStandardMaterial color={color} roughness={0.28} metalness={0.16} />
-        </mesh>
-      ))}
-    </group>
-  )
-}
-
-/* ---- Géométries d'aliments ---- */
-function FoodGeo({ shape, color }) {
-  if (shape === 'peas') {
-    const pods = [[-0.16, 0, 0.04], [0.17, 0.03, -0.05], [0.02, 0.06, 0.16], [0.04, 0.22, 0.02]]
-    return <group>{pods.map((p, i) => <mesh key={i} position={p}><sphereGeometry args={[0.2, 22, 22]} /><meshStandardMaterial color={color} roughness={0.34} /></mesh>)}</group>
-  }
-  if (shape === 'carrot') {
-    return (
-      <group>
-        <mesh rotation={[Math.PI, 0, 0]} position={[0, -0.05, 0]}><coneGeometry args={[0.24, 0.86, 24]} /><meshStandardMaterial color={color} roughness={0.42} /></mesh>
-        {[-0.12, 0, 0.12].map((x, i) => <mesh key={i} position={[x, 0.5, 0]} rotation={[0, 0, x * 2]}><coneGeometry args={[0.05, 0.34, 8]} /><meshStandardMaterial color="#5d8a3f" roughness={0.5} /></mesh>)}
-      </group>
-    )
-  }
-  if (shape === 'herb') {
-    const leaves = [[0, 0, 0, 0], [0.16, 0.1, 0, 0.6], [-0.16, 0.08, 0, -0.6], [0.04, 0.24, 0.05, 0.2]]
-    return <group>{leaves.map((l, i) => <mesh key={i} position={[l[0], l[1], l[2]]} rotation={[0.4, 0, l[3]]} scale={[0.5, 1, 0.18]}><sphereGeometry args={[0.26, 16, 16]} /><meshStandardMaterial color={color} roughness={0.45} /></mesh>)}</group>
-  }
-  if (shape === 'onion') {
-    return (
-      <group>
-        <mesh scale={[1, 1.1, 1]}><sphereGeometry args={[0.34, 26, 26]} /><meshStandardMaterial color={color} roughness={0.4} /></mesh>
-        <mesh position={[0, 0.4, 0]}><coneGeometry args={[0.05, 0.2, 8]} /><meshStandardMaterial color="#b9a878" roughness={0.6} /></mesh>
-      </group>
-    )
-  }
-  // grains
-  const seeds = [[-0.18, 0, 0], [0.18, 0.05, 0.05], [0, 0.04, -0.18], [0.1, 0.2, 0.08], [-0.12, 0.16, -0.06]]
-  return <group>{seeds.map((p, i) => <mesh key={i} position={p} rotation={[i, i * 0.6, 0]} scale={[1, 0.5, 0.5]}><sphereGeometry args={[0.16, 14, 14]} /><meshStandardMaterial color={color} roughness={0.4} metalness={0.05} /></mesh>)}</group>
-}
-
-/* ---- Ingrédient cliquable qui vole dans la marmite ---- */
-function Ingredient({ data, added, selected, onPick }) {
-  const ref = useRef()
-  const flying = useRef(false)
-  const landed = useRef(false)
-  const t = useRef(0)
-  const start = useMemo(() => new THREE.Vector3(...data.rest), [data.rest])
-  const ctrl = useMemo(() => new THREE.Vector3(data.rest[0] * 0.35, Math.max(data.rest[1], 1.5) + 1.7, data.rest[2] * 0.35), [data.rest])
-  const end = useMemo(() => new THREE.Vector3(0, 1.3, 0), [])
-  const BASE = 0.62
-
-  useEffect(() => { if (added && !flying.current && !landed.current) { flying.current = true; t.current = 0 } }, [added])
-
-  useFrame((state, dt) => {
-    const m = ref.current
-    if (!m) return
-    if (landed.current) { m.visible = false; return }
-    if (flying.current) {
-      t.current = Math.min(1, t.current + dt / 0.85)
-      const e = easeInOut(t.current)
-      m.position.copy(quadBezier(start, ctrl, end, e))
-      m.scale.setScalar(BASE * (1 - 0.82 * e))
-      m.rotation.x += dt * 6; m.rotation.y += dt * 5
-      if (t.current >= 1) { flying.current = false; landed.current = true; m.visible = false }
-    } else {
-      const k = state.clock.elapsedTime
-      m.position.set(start.x, start.y + Math.sin(k * 1.2 + start.x) * 0.09, start.z)
-      m.rotation.y += dt * 0.5
-      const s = BASE * (selected ? 1.18 : 1)
-      m.scale.x += (s - m.scale.x) * 0.15; m.scale.y = m.scale.x; m.scale.z = m.scale.x
-    }
-  })
-
-  return (
-    <group ref={ref}
-      onClick={(e) => { e.stopPropagation(); onPick(data.id) }}
-      onPointerOver={() => (document.body.style.cursor = 'pointer')}
-      onPointerOut={() => (document.body.style.cursor = 'default')}>
-      <FoodGeo shape={data.shape} color={data.color} />
-      {!added && (
-        <Html center position={[0, 0.75, 0]} distanceFactor={9}>
-          <div className={`scene-label ${selected ? 'on' : ''}`}><span>{data.number}</span>{data.label}</div>
-        </Html>
-      )}
-    </group>
-  )
-}
-
-/* ---- Scène 3D des ingrédients + marmite ---- */
-function IngredientsCanvas({ added, selected, onPick }) {
-  return (
-    <Canvas dpr={[1, 2]} camera={{ position: [0, 0.7, 6.4], fov: 42 }} gl={{ antialias: true }}>
-      <SceneLights />
-      <group position={[0, -0.7, 0]}>
-        <Marmite />
-        {ingredientData.map((d) => <Ingredient key={d.id} data={d} added={added.includes(d.id)} selected={selected === d.id} onPick={onPick} />)}
-        <ContactShadows position={[0, 0.005, 0]} opacity={0.38} scale={9} blur={2.6} far={4} color="#5a3d22" />
-      </group>
-    </Canvas>
-  )
-}
-
-/* ---- Marmite vitrine (hero) ---- */
-function ShowcaseCanvas() {
-  return (
-    <Canvas dpr={[1, 2]} camera={{ position: [0, 0.9, 6], fov: 40 }} gl={{ antialias: true }}>
-      <SceneLights />
-      <group position={[0, -0.7, 0]}>
-        <SpinGroup speed={0.25}><Marmite /></SpinGroup>
-        <FloatFood shape="carrot" color="#d4742b" base={[2.1, 1.7, 0.3]} />
-        <FloatFood shape="herb" color="#5d8a3f" base={[-2.1, 1.5, -0.2]} />
-        <FloatFood shape="peas" color="#6f9a4e" base={[-1.9, 0.6, 0.6]} />
-        <ContactShadows position={[0, 0.005, 0]} opacity={0.34} scale={8} blur={2.6} far={4} color="#5a3d22" />
-      </group>
-    </Canvas>
-  )
-}
-function SpinGroup({ children, speed = 0.3 }) {
-  const ref = useRef()
-  useFrame((_, dt) => { if (ref.current) ref.current.rotation.y += dt * speed })
-  return <group ref={ref}>{children}</group>
-}
-function FloatFood({ shape, color, base }) {
-  const ref = useRef()
-  const b = useMemo(() => new THREE.Vector3(...base), [base])
-  useFrame((s, dt) => { const m = ref.current; if (!m) return; m.position.set(b.x, b.y + Math.sin(s.clock.elapsedTime * 1.1 + b.x) * 0.12, b.z); m.rotation.y += dt * 0.5 })
-  return <group ref={ref} scale={0.6}><FoodGeo shape={shape} color={color} /></group>
-}
-
-/* ---- Scène du four (cuisson) ---- */
-function OvenCanvas() {
-  return (
-    <Canvas dpr={[1, 2]} camera={{ position: [0, 0.4, 6.2], fov: 42 }} gl={{ antialias: true }}>
-      <SceneLights warm />
-      <group position={[0, -0.2, 0]}>
-        <RoundedBox args={[4.4, 3.4, 2.2]} radius={0.16} smoothness={4} position={[0, 0.4, -0.4]}>
-          <meshStandardMaterial color="#2a2018" roughness={0.6} metalness={0.2} />
-        </RoundedBox>
-        {/* cavité */}
-        <mesh position={[0, 0.45, 0.2]}><boxGeometry args={[3.2, 2.2, 0.1]} /><meshStandardMaterial color="#140e09" roughness={0.9} /></mesh>
-        <mesh position={[0, 0.45, 0.18]}><planeGeometry args={[3.2, 2.2]} /><meshStandardMaterial color="#e07a32" emissive="#e07a32" emissiveIntensity={0.5} transparent opacity={0.28} /></mesh>
-        <OvenLight />
-        <group position={[0, -0.2, 0.5]}><Marmite scale={0.62} /></group>
-        {/* poignée de porte */}
-        <mesh position={[0, -0.85, 0.62]} rotation={[0, 0, Math.PI / 2]}><cylinderGeometry args={[0.06, 0.06, 2.6, 16]} /><meshStandardMaterial color="#8a958c" metalness={0.5} roughness={0.4} /></mesh>
-        <ContactShadows position={[0, -1.05, 0.4]} opacity={0.4} scale={7} blur={2.4} far={4} color="#3a2615" />
-      </group>
-    </Canvas>
-  )
-}
-function OvenLight() {
-  const ref = useRef()
-  useFrame((s) => { if (ref.current) ref.current.intensity = 1.6 + Math.sin(s.clock.elapsedTime * 3) * 0.4 })
-  return <pointLight ref={ref} position={[0, 0.4, 1]} color="#ff9a4d" intensity={1.6} distance={6} />
-}
-
-/* ---- Scène de l'assiette dressée (dressage) ---- */
-function PlateCanvas() {
-  return (
-    <Canvas dpr={[1, 2]} camera={{ position: [0, 3.4, 4.6], fov: 40 }} gl={{ antialias: true }}>
-      <SceneLights warm />
-      <SpinGroup speed={0.18}>
-        <group position={[0, 0, 0]}>
-          {/* assiette */}
-          <mesh position={[0, 0, 0]}><cylinderGeometry args={[1.95, 1.85, 0.16, 64]} /><meshStandardMaterial color="#fbf7ee" roughness={0.25} metalness={0.04} /></mesh>
-          <mesh position={[0, 0.08, 0]}><torusGeometry args={[1.78, 0.09, 18, 64]} /><meshStandardMaterial color="#f2ead9" roughness={0.3} /></mesh>
-          <mesh position={[0, 0.085, 0]} rotation={[-Math.PI / 2, 0, 0]}><ringGeometry args={[0.7, 1.5, 64]} /><meshStandardMaterial color="#ede2cd" roughness={0.4} side={THREE.DoubleSide} /></mesh>
-          {/* houmous */}
-          <mesh position={[0, 0.16, 0]}><cylinderGeometry args={[0.62, 0.66, 0.12, 40]} /><meshStandardMaterial color="#e6cf94" roughness={0.6} /></mesh>
-          {/* falafels */}
-          {[[0.35, 0.4], [-0.4, 0.45], [0.5, -0.4], [-0.2, -0.5]].map((p, i) => <mesh key={'f' + i} position={[p[0], 0.27, p[1]]}><sphereGeometry args={[0.2, 20, 20]} /><meshStandardMaterial color="#a9712f" roughness={0.7} /></mesh>)}
-          {/* quartiers de courge */}
-          {[[1.0, 0.2], [0.9, -0.5], [1.15, -0.1]].map((p, i) => <mesh key={'pk' + i} position={[p[0], 0.22, p[1]]} rotation={[0, i, 0.3]}><coneGeometry args={[0.16, 0.5, 4]} /><meshStandardMaterial color="#e08a36" roughness={0.55} /></mesh>)}
-          {/* chou-fleur */}
-          {[[-1.0, 0.3], [-1.1, -0.2], [-0.9, -0.6]].map((p, i) => <group key={'c' + i} position={[p[0], 0.24, p[1]]}>{[[0, 0, 0], [0.12, 0.05, 0], [-0.1, 0.04, 0.08], [0.02, 0.12, -0.06]].map((q, j) => <mesh key={j} position={q}><sphereGeometry args={[0.1, 12, 12]} /><meshStandardMaterial color="#f0ead8" roughness={0.7} /></mesh>)}</group>)}
-          {/* feuilles */}
-          {[[0.2, 1.1], [-0.3, 1.0], [0.6, 0.9], [-0.7, 0.8]].map((p, i) => <mesh key={'l' + i} position={[p[0], 0.2, p[1]]} rotation={[0.3, i, 0.2]} scale={[0.6, 1, 0.2]}><sphereGeometry args={[0.22, 14, 14]} /><meshStandardMaterial color="#557f37" roughness={0.5} /></mesh>)}
-          {/* graines de grenade */}
-          {[[0.1, 0.1], [-0.1, -0.1], [0.2, -0.05], [-0.2, 0.08]].map((p, i) => <mesh key={'s' + i} position={[p[0], 0.24, p[1]]}><sphereGeometry args={[0.05, 10, 10]} /><meshStandardMaterial color="#b23a2e" roughness={0.4} /></mesh>)}
-        </group>
-        <ContactShadows position={[0, -0.12, 0]} opacity={0.4} scale={6} blur={2.4} far={3} color="#5a3d22" />
-      </SpinGroup>
-    </Canvas>
-  )
-}
-
-/* =========================================================================
-   APP
-   ========================================================================= */
 export default function App() {
-  const [current, setCurrent] = useState(0)
+  const [scene, setScene] = useState(0)
+  const [direction, setDirection] = useState('next')
   const [notesOpen, setNotesOpen] = useState(false)
-  const sectionRefs = useRef([])
+  const lockedRef = useRef(false)
 
-  const goTo = (index) => {
-    const target = Math.max(0, Math.min(sections.length - 1, index))
-    sectionRefs.current[target]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const goTo = (target) => {
+    setScene((current) => {
+      const next = Math.max(0, Math.min(SCENES.length - 1, target))
+      if (next === current) return current
+      setDirection(next > current ? 'next' : 'prev')
+      return next
+    })
   }
 
-  useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('in-view')
-          setCurrent(Number(entry.target.dataset.index))
-        }
-      })
-    }, { threshold: 0.4 })
-    sectionRefs.current.forEach((s) => s && observer.observe(s))
-    return () => observer.disconnect()
-  }, [])
-
-  useEffect(() => {
-    const onScroll = () => {
-      const max = document.documentElement.scrollHeight - window.innerHeight
-      document.documentElement.style.setProperty('--progress', `${max > 0 ? (window.scrollY / max) * 100 : 0}%`)
-    }
-    onScroll(); window.addEventListener('scroll', onScroll, { passive: true })
-    return () => window.removeEventListener('scroll', onScroll)
-  }, [])
+  const next = () => goTo(scene + 1)
+  const prev = () => goTo(scene - 1)
+  const replay = () => {
+    setDirection('prev')
+    setScene(0)
+  }
 
   useEffect(() => {
     const onKey = (event) => {
       const key = event.key.toLowerCase()
-      if (event.key === 'ArrowDown' || event.key === 'PageDown' || event.key === ' ') { event.preventDefault(); goTo(current + 1) }
-      if (event.key === 'ArrowUp' || event.key === 'PageUp') { event.preventDefault(); goTo(current - 1) }
-      if (key === 'n') setNotesOpen((v) => !v)
-      if (key === 'r') goTo(0)
-      if (key === 'f') !document.fullscreenElement ? document.documentElement.requestFullscreen?.() : document.exitFullscreen?.()
+      if (event.key === 'ArrowRight' || event.key === ' ' || event.key === 'PageDown') {
+        event.preventDefault()
+        next()
+      }
+      if (event.key === 'ArrowLeft' || event.key === 'PageUp') {
+        event.preventDefault()
+        prev()
+      }
+      if (key === 'n') setNotesOpen((open) => !open)
+      if (key === 'r') replay()
+      if (key === 'f') toggleFullscreen()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [current])
+  }, [scene])
+
+  useEffect(() => {
+    const onWheel = (event) => {
+      if (Math.abs(event.deltaY) < 40 || lockedRef.current) return
+      lockedRef.current = true
+      if (event.deltaY > 0) next()
+      else prev()
+      setTimeout(() => {
+        lockedRef.current = false
+      }, 900)
+    }
+    window.addEventListener('wheel', onWheel, { passive: true })
+    return () => window.removeEventListener('wheel', onWheel)
+  }, [scene])
 
   return (
-    <main className="site-shell">
-      <div className="global-grain" />
-      <Header current={current} onNav={goTo} onNotes={() => setNotesOpen(true)} />
-      <div className="global-progress"><span /></div>
-      <Section id="intro" index={0} refs={sectionRefs}><IntroSection onNext={() => goTo(1)} /></Section>
-      <Section id="method" index={1} refs={sectionRefs}><MethodSection /></Section>
-      <Section id="ingredients" index={2} refs={sectionRefs}><IngredientsSection /></Section>
-      <Section id="transform" index={3} refs={sectionRefs}><TransformSection /></Section>
-      <Section id="dressage" index={4} refs={sectionRefs}><DressageSection /></Section>
-      <Section id="final" index={5} refs={sectionRefs}><ConclusionSection onReplay={() => goTo(0)} /></Section>
-      {current < sections.length - 1 && <button className="scroll-pill" onClick={() => goTo(current + 1)}>Scroll <ArrowDown size={16} /></button>}
-      <NotesPanel open={notesOpen} onClose={() => setNotesOpen(false)} sectionId={sections[current].id} />
+    <main className="experience-shell" data-scene={SCENES[scene].id}>
+      <div className="paper-grain" />
+      <Header scene={scene} onNav={goTo} onNotes={() => setNotesOpen(true)} onReplay={replay} />
+      <div className="progress-track"><span style={{ width: `${((scene + 1) / SCENES.length) * 100}%` }} /></div>
+
+      <section className={`scene-frame ${direction}`} key={SCENES[scene].id}>
+        {scene === 0 && <IntroScene onNext={next} />}
+        {scene === 1 && <MethodScene />}
+        {scene === 2 && <IngredientsScene />}
+        {scene === 3 && <CookingScene />}
+        {scene === 4 && <DressageScene onReplay={replay} />}
+      </section>
+
+      <Controls scene={scene} onPrev={prev} onNext={next} />
+      <NotesPanel open={notesOpen} data={NOTES[SCENES[scene].id]} onClose={() => setNotesOpen(false)} />
     </main>
   )
 }
 
-function Section({ id, index, refs, children }) {
-  return <section id={id} data-index={index} ref={(el) => (refs.current[index] = el)} className={`journey-section ${id}`}><div className="section-curtain" />{children}</section>
+function toggleFullscreen() {
+  if (!document.fullscreenElement) document.documentElement.requestFullscreen?.()
+  else document.exitFullscreen?.()
 }
 
-function Header({ current, onNav, onNotes }) {
+function Header({ scene, onNav, onNotes, onReplay }) {
   return (
     <header className="topbar">
-      <button className="brand" onClick={() => onNav(0)}><span className="brand-mark"><ChefHat size={16} /></span><span><strong>ansamble</strong><small>Cuisiner le collectif</small></span></button>
-      <nav className="site-nav">{sections.map((item, index) => <button key={item.id} className={current === index ? 'active' : ''} onClick={() => onNav(index)}>{item.label}</button>)}</nav>
-      <div className="header-actions"><button className="ghost-btn" onClick={onNotes}><BookOpen size={15} /> Notes</button><button className="solid-btn" onClick={() => !document.fullscreenElement ? document.documentElement.requestFullscreen?.() : document.exitFullscreen?.()}><Maximize size={15} /> Plein écran</button></div>
+      <button className="brand" onClick={() => onNav(0)} aria-label="Revenir à l’accueil">
+        <span className="brand-mark"><ChefHat size={16} /></span>
+        <span>
+          <strong>ansamble</strong>
+          <small>Cuisiner le collectif</small>
+        </span>
+      </button>
+
+      <nav className="scene-nav" aria-label="Navigation par scènes">
+        {SCENES.map((item, index) => (
+          <button key={item.id} className={scene === index ? 'active' : ''} onClick={() => onNav(index)}>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            {item.nav}
+          </button>
+        ))}
+      </nav>
+
+      <div className="top-actions">
+        <button className="ghost-button" onClick={onNotes}><BookOpen size={15} /> Notes</button>
+        <button className="primary-button compact" onClick={toggleFullscreen}><Maximize size={15} /> Plein écran</button>
+        <button className="icon-button" onClick={onReplay} aria-label="Rejouer"><RotateCcw size={16} /></button>
+      </div>
     </header>
   )
 }
 
-function Kicker({ children }) { return <div className="kicker reveal">{children}</div> }
-
-function IntroSection({ onNext }) {
-  const rootRef = useRevealScope()
+function Controls({ scene, onPrev, onNext }) {
   return (
-    <div className="section-frame intro-frame" ref={rootRef}>
-      <div className="split-layout">
-        <div className="copy-side">
-          <div className="hero-chip reveal"><Sparkles size={14} /> Saison 2025/2026 · Projet logistique</div>
-          <h1 className="display-title reveal">Ma recette <em>logistique</em></h1>
-          <p className="body-lead reveal">Une année racontée comme une recette : on choisit les ingrédients, on les fait mijoter, puis on dresse une logistique plus lisible, fiable et pilotée par la donnée.</p>
-          <div className="tag-row reveal"><span>Grand Ouest multi-sites</span><span>Portage de repas</span><span>Pilotage par la donnée</span></div>
-          <button className="main-cta reveal" onClick={onNext}>Passer en cuisine</button>
+    <div className="controls">
+      <button className="ghost-button" disabled={scene === 0} onClick={onPrev}><ArrowLeft size={15} /> Précédent</button>
+      <button className="primary-button" disabled={scene === SCENES.length - 1} onClick={onNext}>Suivant <ArrowRight size={15} /></button>
+    </div>
+  )
+}
+
+function IntroScene({ onNext }) {
+  return (
+    <div className="scene-content hero-scene">
+      <EditorialBackdrop />
+      <div className="hero-copy reveal-stack">
+        <div className="eyebrow">Scène 01 · Recette logistique</div>
+        <h1>Ma recette <em>logistique</em> 2025/2026</h1>
+        <p>Rendre les flux lisibles, les données fiables et les pratiques partageables.</p>
+        <div className="hero-actions">
+          <button className="primary-button large" onClick={onNext}>Commencer la recette <ArrowRight size={17} /></button>
+          <span>5 à 7 minutes · support oral interactif</span>
         </div>
-        <div className="hero-showcase reveal">
-          <div className="scene-canvas hero-canvas"><ShowcaseCanvas /></div>
-          <div className="hero-float-card"><strong>Le fil rouge</strong><p>Rendre les flux lisibles, les données fiables et les pratiques partageables.</p></div>
+      </div>
+
+      <div className="hero-visual" aria-hidden="true">
+        <div className="recipe-card">
+          <div className="recipe-card-top" />
+          <div className="recipe-card-line large" />
+          <div className="recipe-card-line" />
+          <div className="recipe-card-line short" />
+        </div>
+        <IngredientStillLife />
+      </div>
+    </div>
+  )
+}
+
+function MethodScene() {
+  return (
+    <div className="scene-content method-scene">
+      <div className="method-copy reveal-stack">
+        <div className="eyebrow">Scène 02 · La mise en place</div>
+        <h2>Préparer le plan de travail avant de <em>cuisiner les flux.</em></h2>
+        <p>Quatre partis pris structurent l’année. Le détail reste dans les notes, l’écran garde uniquement les décisions fortes.</p>
+      </div>
+
+      <div className="method-board">
+        <div className="board-surface" />
+        <div className="thin-spoon" />
+        <div className="method-items">
+          {METHOD_ITEMS.map((item, index) => (
+            <article className="method-item" key={item.number} style={{ '--delay': `${index * 110}ms` }}>
+              <span className="method-number">{item.number}</span>
+              <div>
+                <h3>{item.title}</h3>
+                <p>{item.text}</p>
+              </div>
+            </article>
+          ))}
         </div>
       </div>
     </div>
   )
 }
 
-function MethodSection() {
-  const rootRef = useRevealScope()
-  return (
-    <div className="section-frame" ref={rootRef}>
-      <div className="method-layout">
-        <div>
-          <Kicker>La mise en place</Kicker>
-          <h2 className="display-title smaller reveal">Réunir les <em>bons ingrédients.</em></h2>
-          <p className="body-lead reveal">Avant d'allumer le feu, on prépare le plan de travail. Toute la recette part de là : choisir les ingrédients utiles, écarter le bruit, et construire une méthode réutilisable.</p>
-          <div className="quote-block reveal"><span className="quote-line" /><p>« Une bonne recette logistique, c'est d'abord une bonne mise en place. »</p></div>
-        </div>
-        <div className="method-rail">
-          {methodItems.map(([number, small, title, text]) => <article className="rail-row reveal" key={number}><div className="rail-number">{number}</div><div className="rail-texts"><small>{small}</small><h3>{title}</h3><p>{text}</p></div></article>)}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function IngredientsSection() {
-  const rootRef = useRevealScope()
-  const [selected, setSelected] = useState('clients')
+function IngredientsScene() {
+  const [selected, setSelected] = useState(INGREDIENTS[0])
   const [added, setAdded] = useState([])
-  const selData = ingredientData.find((d) => d.id === selected)
-  const progress = `${(added.length / ingredientData.length) * 100}%`
+  const potRef = useRef(null)
+  const stageRef = useRef(null)
 
-  const onPick = (id) => {
-    setSelected(id)
-    setAdded((prev) => (prev.includes(id) ? prev : [...prev, id]))
+  const progress = Math.round((added.length / INGREDIENTS.length) * 100)
+
+  const addIngredient = (item, event) => {
+    setSelected(item)
+    if (added.includes(item.id)) return
+
+    const source = event.currentTarget.querySelector('.ingredient-visual')?.getBoundingClientRect()
+    const target = potRef.current?.getBoundingClientRect()
+    if (source && target) animateIngredientFlight(item.type, source, target)
+
+    window.setTimeout(() => {
+      setAdded((current) => [...current, item.id])
+      emitParticles(target)
+    }, 520)
   }
 
+  const allAdded = added.length === INGREDIENTS.length
+
   return (
-    <div className="section-frame ingredients-frame" ref={rootRef}>
-      <div className="ingredients-layout">
-        <div className="ingredients-side">
-          <Kicker>Les ingrédients</Kicker>
-          <h2 className="display-title smaller reveal">Les données tombent dans la <em>marmite.</em></h2>
-          <p className="body-lead reveal">Chaque donnée est un ingrédient en 3D : cliquez pour le faire réellement tomber dans la marmite. Séparés, ce sont des fichiers épars ; réunis, une base de pilotage.</p>
-          <div className="info-card reveal"><span>Ingrédient — {selData.link}</span><h3>{selData.label}</h3><p>{selData.text}</p></div>
-          <div className="info-card reveal"><div className="mini-track"><b style={{ width: progress }} /></div><h3>{added.length} / {ingredientData.length}</h3><p>Ingrédients réunis dans la base de pilotage.</p></div>
+    <div className="scene-content ingredients-scene" ref={stageRef}>
+      <div className="ingredients-copy reveal-stack">
+        <div className="eyebrow">Scène 03 · Les ingrédients</div>
+        <h2>Les données entrent dans la <em>marmite.</em></h2>
+        <p>Chaque ingrédient est une donnée terrain. Clique dessus : il se détache, suit une trajectoire courbe et alimente la recette.</p>
+
+        <div className="selected-panel">
+          <span>Ingrédient sélectionné</span>
+          <h3>{selected.label}</h3>
+          <p>{selected.caption}</p>
         </div>
-        <div className="ingredient-scene reveal">
-          <div className="scene-canvas tall"><IngredientsCanvas added={added} selected={selected} onPick={onPick} /></div>
+        <div className="recipe-progress" aria-label="Progression de la recette">
+          <div><strong>{added.length}</strong><span>/ {INGREDIENTS.length}</span></div>
+          <div className="progress-bar"><b style={{ width: `${progress}%` }} /></div>
+          <small>{allAdded ? 'La base de pilotage est prête.' : 'Ajoute les ingrédients à la marmite.'}</small>
         </div>
+      </div>
+
+      <div className="ingredient-theatre">
+        <div className="theatre-plane" />
+        <div className={`premium-pot ${added.length > 0 ? 'awake' : ''}`} ref={potRef}>
+          <PremiumPot fill={progress} />
+        </div>
+        {INGREDIENTS.map((item) => (
+          <button
+            key={item.id}
+            className={`ingredient-button ${item.position} ${selected.id === item.id ? 'selected' : ''} ${added.includes(item.id) ? 'added' : ''}`}
+            onClick={(event) => addIngredient(item, event)}
+          >
+            <IngredientVisual type={item.type} />
+            <span className="ingredient-text"><b>{item.number}</b>{item.label}</span>
+          </button>
+        ))}
       </div>
     </div>
   )
 }
 
-function TransformSection() {
-  const rootRef = useRevealScope()
+function CookingScene() {
   return (
-    <div className="section-frame" ref={rootRef}>
-      <div className="transform-layout">
-        <div>
-          <Kicker>La cuisson</Kicker>
-          <h2 className="display-title smaller reveal">On laisse <em>mijoter,</em> puis au four.</h2>
-          <p className="body-lead reveal">La chaleur fait son travail : elle transforme les constats terrain en décisions. On observe, on cartographie, on structure, on teste, puis on standardise.</p>
-          <div className="step-row reveal">{transformSteps.map((step, index) => <span key={step} className={index === 2 ? 'active' : ''}>{step}</span>)}</div>
+    <div className="scene-content cooking-scene">
+      <div className="cooking-copy reveal-stack">
+        <div className="eyebrow">Scène 04 · Au four</div>
+        <h2>Transformer les constats terrain en <em>décisions.</em></h2>
+        <p>La recette passe au four : les ingrédients deviennent une méthode de travail claire et réutilisable.</p>
+        <div className="method-pills">
+          {COOKING_STEPS.map((step, index) => <span key={step} style={{ '--delay': `${index * 260}ms` }}>{step}</span>)}
         </div>
-        <div className="oven-scene reveal"><div className="scene-canvas tall"><OvenCanvas /></div></div>
+      </div>
+
+      <div className="oven-theatre" aria-hidden="true">
+        <PremiumOven />
       </div>
     </div>
   )
 }
 
-function DressageSection() {
-  const rootRef = useRevealScope()
-  const benefits = [['01', 'Moins d’erreurs terrain'], ['02', 'Meilleure visibilité des flux'], ['03', 'Décisions plus rapides'], ['04', 'Standards partageables'], ['05', 'Logistique robuste pour le portage']]
+function DressageScene({ onReplay }) {
   return (
-    <div className="section-frame" ref={rootRef}>
-      <div className="dressage-head"><Kicker>Le dressage</Kicker><h2 className="display-title smaller reveal">On dresse <em>l'assiette.</em></h2><p className="body-lead center reveal">Le résultat se sert clairement. L'assiette est entièrement modélisée en 3D : houmous, falafels, courge rôtie, chou-fleur et herbes fraîches.</p></div>
-      <div className="dressage-stage reveal">
-        <div className="benefit-col left">{benefits.slice(0, 3).map(([n, t]) => <div className="benefit-card" key={n}><span>{n}</span><p>{t}</p></div>)}</div>
-        <div className="scene-canvas plate-canvas"><PlateCanvas /></div>
-        <div className="benefit-col right">{benefits.slice(3).map(([n, t]) => <div className="benefit-card" key={n}><span>{n}</span><p>{t}</p></div>)}</div>
+    <div className="scene-content dressage-scene">
+      <div className="dressage-header reveal-stack">
+        <div className="eyebrow">Scène 05 · Dressage final</div>
+        <h2>Le résultat se sert de façon <em>claire</em> et professionnelle.</h2>
+        <p>Le dressage est recréé en illustration 3D éditoriale : pas de photo, pas de rendu gadget.</p>
+      </div>
+
+      <div className="dressage-theatre">
+        <Dish3D />
+        {BENEFITS.map((benefit, index) => (
+          <div className={`benefit-chip benefit-${index + 1}`} key={benefit} style={{ '--delay': `${index * 110}ms` }}>
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <p>{benefit}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="final-quote">
+        <p>« Avant d’optimiser une organisation, il faut d’abord rendre ses flux lisibles, ses données fiables et ses pratiques partageables. »</p>
+        <button className="ghost-button" onClick={onReplay}><RotateCcw size={15} /> Rejouer la recette</button>
       </div>
     </div>
   )
 }
 
-function ConclusionSection({ onReplay }) {
-  const rootRef = useRevealScope()
-  return <div className="section-frame" ref={rootRef}><div className="final-card reveal"><Kicker>Le service</Kicker><blockquote>Avant d'optimiser une organisation, il faut d'abord rendre ses flux <em>lisibles</em>, ses données <em>fiables</em> et ses pratiques <em>partageables</em>.</blockquote><div className="final-sign reveal">Ma recette logistique · 2025 / 2026</div><button className="main-cta" onClick={onReplay}><RotateCcw size={16} /> Revoir le parcours</button></div></div>
+function NotesPanel({ open, data, onClose }) {
+  return (
+    <aside className={`notes-panel ${open ? 'open' : ''}`}>
+      <button className="notes-close" onClick={onClose} aria-label="Fermer les notes"><X size={18} /></button>
+      <div className="eyebrow">Notes orales</div>
+      <h3>{data.title}</h3>
+      <p>{data.text}</p>
+    </aside>
+  )
 }
 
-function NotesPanel({ open, onClose, sectionId }) {
-  const data = notes[sectionId]
-  return <aside className={`notes-panel ${open ? 'open' : ''}`}><button className="notes-close" onClick={onClose}><X size={18} /></button><div className="kicker">Notes orales</div><h3>{data.title}</h3><p>{data.body}</p></aside>
+function EditorialBackdrop() {
+  return (
+    <div className="editorial-backdrop" aria-hidden="true">
+      <span className="botanical b1" />
+      <span className="botanical b2" />
+      <span className="botanical b3" />
+      <span className="line-art l1" />
+      <span className="line-art l2" />
+    </div>
+  )
 }
 
-function useRevealScope() {
-  const rootRef = useRef(null)
-  useEffect(() => {
-    const root = rootRef.current
-    if (!root) return
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting) return
-        entry.target.querySelectorAll('.reveal').forEach((el, index) => { el.style.setProperty('--delay', `${index * 0.07}s`); el.classList.add('visible') })
-      })
-    }, { threshold: 0.2 })
-    observer.observe(root)
-    return () => observer.disconnect()
-  }, [])
-  return rootRef
+function IngredientStillLife() {
+  return (
+    <div className="still-life">
+      <div className="still-board" />
+      <div className="still-item peas"><IngredientVisual type="peas" /></div>
+      <div className="still-item carrot"><IngredientVisual type="carrot" /></div>
+      <div className="still-item herb"><IngredientVisual type="herb" /></div>
+      <div className="still-item grain"><IngredientVisual type="grain" /></div>
+      <div className="still-spoon" />
+    </div>
+  )
+}
+
+function IngredientVisual({ type }) {
+  if (type === 'peas') {
+    return (
+      <svg className="ingredient-visual" viewBox="0 0 120 95" aria-hidden="true">
+        <defs>
+          <radialGradient id="peasG" cx="35%" cy="30%"><stop offset="0" stopColor="#BEE882"/><stop offset="1" stopColor="#4D8C41"/></radialGradient>
+          <linearGradient id="bowlG" x1="0" x2="1"><stop offset="0" stopColor="#F6E4C9"/><stop offset="1" stopColor="#CDB18E"/></linearGradient>
+        </defs>
+        <ellipse cx="60" cy="68" rx="48" ry="17" fill="#9B7D58" opacity=".28"/>
+        <path d="M22 36h76l-10 33c-3 9-11 14-28 14s-25-5-28-14L22 36Z" fill="url(#bowlG)"/>
+        <ellipse cx="60" cy="36" rx="38" ry="16" fill="#F7E7CF" stroke="#BFA17D" strokeWidth="2"/>
+        {[36,48,60,72,84,43,55,67,79].map((x, i) => <circle key={i} cx={x} cy={32 + (i % 3) * 6} r="5.8" fill="url(#peasG)" />)}
+      </svg>
+    )
+  }
+  if (type === 'carrot') {
+    return (
+      <svg className="ingredient-visual" viewBox="0 0 120 95" aria-hidden="true">
+        <defs>
+          <linearGradient id="carrotG" x1="0" x2="1"><stop offset="0" stopColor="#F6A04D"/><stop offset="1" stopColor="#D45F2C"/></linearGradient>
+          <linearGradient id="leafG" x1="0" x2="1"><stop offset="0" stopColor="#7FB46B"/><stop offset="1" stopColor="#2D5F3D"/></linearGradient>
+        </defs>
+        <ellipse cx="59" cy="72" rx="45" ry="12" fill="#8D6540" opacity=".20"/>
+        <path d="M58 31c-10 9-22 35-24 48 13-4 43-22 57-39-9-2-23-7-33-9Z" fill="url(#carrotG)"/>
+        <path d="M58 31c-4-14-12-19-23-22 1 9 8 18 23 22Z" fill="url(#leafG)"/>
+        <path d="M60 31c3-15 12-23 27-26-2 13-11 21-27 26Z" fill="url(#leafG)"/>
+        <path d="M52 48l21 4M45 61l18 3" stroke="#A94B29" strokeWidth="2" opacity=".55"/>
+      </svg>
+    )
+  }
+  if (type === 'route') {
+    return (
+      <svg className="ingredient-visual" viewBox="0 0 120 95" aria-hidden="true">
+        <defs>
+          <linearGradient id="routeG" x1="0" x2="1"><stop offset="0" stopColor="#EAD8BC"/><stop offset="1" stopColor="#C5A27C"/></linearGradient>
+        </defs>
+        <ellipse cx="62" cy="72" rx="46" ry="13" fill="#8D6540" opacity=".18"/>
+        <path d="M21 38c24-19 54-19 78 0v32c-22 12-52 12-78 0V38Z" fill="url(#routeG)"/>
+        <path d="M36 65c11-27 34-26 48-8" fill="none" stroke="#203628" strokeWidth="5" strokeLinecap="round"/>
+        <path d="M51 66c8-19 21-19 31-6" fill="none" stroke="#F9F2E7" strokeWidth="2" strokeDasharray="5 5" strokeLinecap="round"/>
+        <circle cx="35" cy="65" r="8" fill="#C66A3A"/><circle cx="87" cy="55" r="8" fill="#365642"/>
+      </svg>
+    )
+  }
+  if (type === 'herb') {
+    return (
+      <svg className="ingredient-visual" viewBox="0 0 120 95" aria-hidden="true">
+        <defs>
+          <linearGradient id="herbStem" x1="0" x2="1"><stop offset="0" stopColor="#83B16E"/><stop offset="1" stopColor="#284F37"/></linearGradient>
+        </defs>
+        <ellipse cx="61" cy="74" rx="42" ry="12" fill="#8D6540" opacity=".18"/>
+        <path d="M35 75c10-26 20-43 34-62M58 75c3-24 15-43 31-58M75 75c-3-21 1-37 9-51" stroke="url(#herbStem)" strokeWidth="4" strokeLinecap="round"/>
+        {[[40,55],[47,42],[57,36],[67,25],[76,42],[84,31],[86,53],[68,56]].map(([x,y], i) => <ellipse key={i} cx={x} cy={y} rx="10" ry="5" fill={i % 2 ? '#2D5F3D' : '#6FA15F'} transform={`rotate(${i % 2 ? -28 : 30} ${x} ${y})`} />)}
+      </svg>
+    )
+  }
+  return (
+    <svg className="ingredient-visual" viewBox="0 0 120 95" aria-hidden="true">
+      <defs>
+        <linearGradient id="grainBowl" x1="0" x2="1"><stop offset="0" stopColor="#F2E1C6"/><stop offset="1" stopColor="#C69D70"/></linearGradient>
+        <radialGradient id="grainG"><stop offset="0" stopColor="#F9D980"/><stop offset="1" stopColor="#B78538"/></radialGradient>
+      </defs>
+      <ellipse cx="60" cy="70" rx="43" ry="13" fill="#8D6540" opacity=".18"/>
+      <path d="M29 42h62l-8 28c-3 9-11 14-23 14s-20-5-23-14L29 42Z" fill="url(#grainBowl)"/>
+      <ellipse cx="60" cy="42" rx="31" ry="12" fill="#F3D89B" stroke="#B98F5B" strokeWidth="2"/>
+      {Array.from({ length: 18 }).map((_, i) => <circle key={i} cx={39 + (i * 7) % 44} cy={36 + (i * 5) % 14} r="2.2" fill="url(#grainG)" />)}
+    </svg>
+  )
+}
+
+function PremiumPot({ fill }) {
+  return (
+    <svg viewBox="0 0 320 250" className="pot-svg" aria-hidden="true">
+      <defs>
+        <linearGradient id="potBody" x1="0" x2="1"><stop offset="0" stopColor="#E7CB9E"/><stop offset=".45" stopColor="#F8E5C3"/><stop offset="1" stopColor="#B98C5E"/></linearGradient>
+        <linearGradient id="potOuter" x1="0" x2="1"><stop offset="0" stopColor="#355E45"/><stop offset=".5" stopColor="#5E8369"/><stop offset="1" stopColor="#244732"/></linearGradient>
+        <radialGradient id="inside" cx="50%" cy="45%"><stop offset="0" stopColor="#F3DCAE"/><stop offset="1" stopColor="#B68C5E"/></radialGradient>
+        <clipPath id="fillClip"><path d="M76 97h168l-17 91c-3 18-19 28-67 28s-64-10-67-28L76 97Z" /></clipPath>
+      </defs>
+      <ellipse cx="160" cy="221" rx="96" ry="18" fill="#5B3A20" opacity=".18"/>
+      <path d="M73 111c-31-7-51 6-51 30 0 26 25 38 60 23" fill="none" stroke="url(#potOuter)" strokeWidth="17" strokeLinecap="round"/>
+      <path d="M247 111c31-7 51 6 51 30 0 26-25 38-60 23" fill="none" stroke="url(#potOuter)" strokeWidth="17" strokeLinecap="round"/>
+      <path d="M76 97h168l-17 91c-3 18-19 28-67 28s-64-10-67-28L76 97Z" fill="url(#potBody)" stroke="#2C4434" strokeWidth="4"/>
+      <g clipPath="url(#fillClip)">
+        <rect x="70" y={216 - fill * 0.82} width="180" height={fill * 0.82} fill="#C66A3A" opacity=".82" />
+        <path d="M75 183c35-14 53 12 83 0s49-7 84 4v35H75Z" fill="#E58A4A" opacity=".55" />
+      </g>
+      <ellipse cx="160" cy="96" rx="92" ry="33" fill="url(#potOuter)"/>
+      <ellipse cx="160" cy="91" rx="76" ry="25" fill="url(#inside)" stroke="#2A4434" strokeWidth="4"/>
+      <ellipse cx="160" cy="92" rx="54" ry="16" fill="#EACB98" opacity=".55"/>
+      <path d="M111 129c6 12 21 21 49 21s44-8 50-20" stroke="#fff" strokeWidth="5" opacity=".23" fill="none" strokeLinecap="round"/>
+      <g className="pot-steam">
+        <path d="M128 57c-12-20 12-25 0-47" />
+        <path d="M160 55c-12-20 12-25 0-47" />
+        <path d="M192 57c-12-20 12-25 0-47" />
+      </g>
+    </svg>
+  )
+}
+
+function PremiumOven() {
+  return (
+    <div className="oven-3d">
+      <div className="oven-shadow" />
+      <div className="oven-body">
+        <div className="oven-top-slot" />
+        <div className="oven-window">
+          <div className="oven-light" />
+          <div className="rack rack-1" />
+          <div className="rack rack-2" />
+          <div className="oven-pot"><PremiumPot fill={78} /></div>
+          <span className="heat-particle p1" />
+          <span className="heat-particle p2" />
+          <span className="heat-particle p3" />
+        </div>
+        <div className="oven-base" />
+      </div>
+    </div>
+  )
+}
+
+function Dish3D() {
+  return (
+    <div className="dish-3d" aria-hidden="true">
+      <div className="dish-shadow" />
+      <svg viewBox="0 0 600 420" className="dish-svg">
+        <defs>
+          <radialGradient id="plateG" cx="50%" cy="42%"><stop offset="0" stopColor="#FFF7E9"/><stop offset=".68" stopColor="#E7D7C2"/><stop offset=".88" stopColor="#BBA486"/><stop offset="1" stopColor="#F9F0E3"/></radialGradient>
+          <radialGradient id="innerG" cx="50%" cy="40%"><stop offset="0" stopColor="#FFFDF7"/><stop offset="1" stopColor="#E8D6BF"/></radialGradient>
+          <linearGradient id="squashG" x1="0" x2="1"><stop offset="0" stopColor="#F9A94D"/><stop offset="1" stopColor="#D55E2D"/></linearGradient>
+          <radialGradient id="falafelG"><stop offset="0" stopColor="#D8A95D"/><stop offset="1" stopColor="#8D6330"/></radialGradient>
+          <radialGradient id="hummusG"><stop offset="0" stopColor="#FFF1D4"/><stop offset="1" stopColor="#C5A878"/></radialGradient>
+        </defs>
+        <ellipse cx="300" cy="225" rx="244" ry="130" fill="url(#plateG)"/>
+        <ellipse cx="300" cy="218" rx="193" ry="98" fill="url(#innerG)" opacity=".96"/>
+        <ellipse cx="300" cy="232" rx="136" ry="54" fill="#C9B89F" opacity=".12"/>
+        <g transform="translate(124 145) rotate(-12)">
+          <path d="M40 45c30-20 72-17 101 8-35 12-68 30-103 45-6-18-5-37 2-53Z" fill="url(#squashG)"/>
+          <path d="M63 65c25-12 46-14 70-5" stroke="#7A3E28" strokeWidth="4" opacity=".45" fill="none"/>
+          <path d="M27 77c33-19 69-19 109 1-36 8-70 24-105 41-8-15-9-29-4-42Z" fill="#F5A143"/>
+          <path d="M50 97c26-13 48-12 70-5" stroke="#7A3E28" strokeWidth="4" opacity=".38" fill="none"/>
+        </g>
+        <g transform="translate(333 150)">
+          {[0,1,2,3,4].map((i) => <circle key={i} cx={36 + (i%3)*44} cy={42 + Math.floor(i/3)*44} r="24" fill="url(#falafelG)" />)}
+          {[0,1,2,3,4].map((i) => <circle key={`s${i}`} cx={28 + (i%3)*44} cy={33 + Math.floor(i/3)*44} r="3" fill="#F2D087" opacity=".7" />)}
+        </g>
+        <g transform="translate(385 82)">
+          <ellipse cx="55" cy="45" rx="55" ry="38" fill="url(#hummusG)"/>
+          <path d="M25 44c20-18 45-20 66-2" fill="none" stroke="#8D714C" strokeWidth="4" opacity=".25"/>
+          {[22,35,48,63,76,90].map((x,i)=><circle key={i} cx={x} cy={28 + (i%2)*14} r="4" fill="#1B1A15" />)}
+        </g>
+        <g transform="translate(210 96)">
+          <path d="M18 92c20-60 68-78 116-66-36 16-52 58-116 66Z" fill="#5C8A55"/>
+          <path d="M59 90c4-52 35-82 80-82-25 24-28 64-80 82Z" fill="#223B2B" opacity=".92"/>
+          <path d="M20 86c36-15 68-31 103-59" stroke="#B7D3A1" strokeWidth="3" opacity=".45"/>
+        </g>
+        <g transform="translate(185 210)">
+          {[0,1,2,3,4,5,6,7].map((i)=><ellipse key={i} cx={i*26} cy={(i%2)*9} rx="15" ry="8" fill="#EAD7B9" transform={`rotate(${i*21} ${i*26} ${(i%2)*9})`} />)}
+        </g>
+        <ellipse cx="260" cy="124" rx="15" ry="5" fill="#FFF" opacity=".35"/>
+        <ellipse cx="410" cy="178" rx="18" ry="6" fill="#FFF" opacity=".28"/>
+      </svg>
+    </div>
+  )
+}
+
+function animateIngredientFlight(type, source, target) {
+  const node = document.createElement('div')
+  node.className = 'flight-object'
+  const wrapper = document.createElement('div')
+  wrapper.innerHTML = ingredientSvgString(type)
+  node.appendChild(wrapper.firstElementChild)
+  document.body.appendChild(node)
+
+  const sx = source.left + source.width / 2
+  const sy = source.top + source.height / 2
+  const ex = target.left + target.width / 2
+  const ey = target.top + target.height * 0.42
+  node.style.left = `${sx}px`
+  node.style.top = `${sy}px`
+
+  const dx = ex - sx
+  const dy = ey - sy
+  node.animate(
+    [
+      { transform: 'translate(-50%, -50%) scale(1) rotate(0deg)', opacity: 1 },
+      { transform: `translate(calc(-50% + ${dx * 0.45}px), calc(-50% + ${dy * 0.45 - 95}px)) scale(.92) rotate(-8deg)`, opacity: .96 },
+      { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(.22) rotate(18deg)`, opacity: 0 }
+    ],
+    { duration: 850, easing: 'cubic-bezier(.2,.75,.2,1)' }
+  ).onfinish = () => node.remove()
+}
+
+function emitParticles(target) {
+  if (!target) return
+  const x = target.left + target.width / 2
+  const y = target.top + target.height * 0.42
+  for (let i = 0; i < 10; i += 1) {
+    const particle = document.createElement('span')
+    particle.className = 'pot-particle'
+    document.body.appendChild(particle)
+    particle.style.left = `${x}px`
+    particle.style.top = `${y}px`
+    const angle = Math.PI * 2 * (i / 10)
+    const radius = 28 + (i % 3) * 14
+    particle.animate(
+      [
+        { transform: 'translate(-50%, -50%) scale(.7)', opacity: .9 },
+        { transform: `translate(calc(-50% + ${Math.cos(angle) * radius}px), calc(-50% + ${Math.sin(angle) * radius}px)) scale(0)`, opacity: 0 }
+      ],
+      { duration: 650, easing: 'ease-out' }
+    ).onfinish = () => particle.remove()
+  }
+}
+
+function ingredientSvgString(type) {
+  const map = {
+    peas: '<svg class="ingredient-visual" viewBox="0 0 120 95"><ellipse cx="60" cy="68" rx="48" ry="17" fill="#9B7D58" opacity=".28"/><path d="M22 36h76l-10 33c-3 9-11 14-28 14s-25-5-28-14L22 36Z" fill="#E8D1AF"/><ellipse cx="60" cy="36" rx="38" ry="16" fill="#F7E7CF" stroke="#BFA17D" stroke-width="2"/><circle cx="36" cy="32" r="6" fill="#4D8C41"/><circle cx="48" cy="38" r="6" fill="#77B65C"/><circle cx="60" cy="32" r="6" fill="#4D8C41"/><circle cx="72" cy="38" r="6" fill="#77B65C"/><circle cx="84" cy="32" r="6" fill="#4D8C41"/></svg>',
+    carrot: '<svg class="ingredient-visual" viewBox="0 0 120 95"><ellipse cx="59" cy="72" rx="45" ry="12" fill="#8D6540" opacity=".20"/><path d="M58 31c-10 9-22 35-24 48 13-4 43-22 57-39-9-2-23-7-33-9Z" fill="#E87932"/><path d="M58 31c-4-14-12-19-23-22 1 9 8 18 23 22Z" fill="#4F7D49"/><path d="M60 31c3-15 12-23 27-26-2 13-11 21-27 26Z" fill="#2D5F3D"/></svg>',
+    route: '<svg class="ingredient-visual" viewBox="0 0 120 95"><ellipse cx="62" cy="72" rx="46" ry="13" fill="#8D6540" opacity=".18"/><path d="M21 38c24-19 54-19 78 0v32c-22 12-52 12-78 0V38Z" fill="#DDC4A0"/><path d="M36 65c11-27 34-26 48-8" fill="none" stroke="#203628" stroke-width="5" stroke-linecap="round"/><circle cx="35" cy="65" r="8" fill="#C66A3A"/><circle cx="87" cy="55" r="8" fill="#365642"/></svg>',
+    herb: '<svg class="ingredient-visual" viewBox="0 0 120 95"><ellipse cx="61" cy="74" rx="42" ry="12" fill="#8D6540" opacity=".18"/><path d="M35 75c10-26 20-43 34-62M58 75c3-24 15-43 31-58M75 75c-3-21 1-37 9-51" stroke="#365642" stroke-width="4" stroke-linecap="round"/><ellipse cx="40" cy="55" rx="10" ry="5" fill="#6FA15F" transform="rotate(30 40 55)"/><ellipse cx="57" cy="36" rx="10" ry="5" fill="#2D5F3D" transform="rotate(-28 57 36)"/><ellipse cx="76" cy="42" rx="10" ry="5" fill="#6FA15F" transform="rotate(30 76 42)"/></svg>',
+    grain: '<svg class="ingredient-visual" viewBox="0 0 120 95"><ellipse cx="60" cy="70" rx="43" ry="13" fill="#8D6540" opacity=".18"/><path d="M29 42h62l-8 28c-3 9-11 14-23 14s-20-5-23-14L29 42Z" fill="#D7AF7E"/><ellipse cx="60" cy="42" rx="31" ry="12" fill="#F3D89B" stroke="#B98F5B" stroke-width="2"/><circle cx="43" cy="38" r="3" fill="#B78538"/><circle cx="55" cy="44" r="3" fill="#DCA84D"/><circle cx="69" cy="37" r="3" fill="#B78538"/><circle cx="81" cy="43" r="3" fill="#DCA84D"/></svg>'
+  }
+  return map[type] || map.grain
 }
