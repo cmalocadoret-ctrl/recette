@@ -25,7 +25,6 @@ Structure en scènes plein écran avec navigation :
 Les 3 projets phares sont :
 - Réorganisation logistique Grand Ouest / multi-sites.
 - Digitalisation du portage de repas.
-- Structuration de la donnée logistique — Ansamble 2030.
 
 Le message central : mon année a consisté à transformer une logistique encore très terrain en une logistique plus structurée, plus fiable et plus pilotée par la donnée.
 
