@@ -1,20 +1,9 @@
-# Ansamble · Recette logistique — V2 Premium
+# Ansamble — Refonte professionnelle vraie
 
-Nouvelle refonte complète, séparée des versions précédentes.
+Refonte complète en site narratif premium, sans dépendances 3D lourdes et sans pseudo-rendu cheap.
+Le rendu utilise des scènes SVG/CSS animées, plus stables, plus propres et plus professionnelles.
 
-## Ce qui change
-
-- Nouvelle architecture React + Vite + Three.js / React Three Fiber.
-- Vraies scènes 3D web : marmite, ingrédients, four, assiette.
-- Scroll narratif immersif, sans logique PowerPoint.
-- Thème clair, premium, culinaire.
-- Suppression de la mention “Ansamble 2030”.
-- Ingrédients cliquables : ils rejoignent la marmite dans la scène 3D.
-- Four et dressage refaits avec des volumes 3D plus sobres.
-- Photo du dressage intégrée comme texture dans une assiette 3D.
-- Build de production vérifié, dossier `dist/` inclus.
-
-## Lancer en local
+## Lancer
 
 ```bash
 npm install
@@ -29,9 +18,21 @@ npm run build
 
 ## Navigation
 
-- Scroll naturel entre les sections.
-- Flèche bas / espace : section suivante.
-- Flèche haut : section précédente.
-- Touche `N` : notes orales.
-- Touche `F` : plein écran.
-- Touche `R` : retour au début.
+- Suivant / Précédent
+- Rejouer
+- Notes
+- Plein écran
+- Flèche droite ou espace : avancer
+- Flèche gauche : revenir
+- N : notes
+- F : plein écran
+- R : rejouer
+
+## Ce qui a été refondu
+
+- Plus de double image en page d’accueil.
+- Plus de mention Ansamble 2030.
+- Thème recette présent dans toutes les scènes.
+- Ingrédients animés vers la marmite avec trajectoire courbe.
+- Four et dressage recréés en illustration premium, sans photo.
+- Responsive corrigé avec une expérience plein écran desktop prioritaire.
