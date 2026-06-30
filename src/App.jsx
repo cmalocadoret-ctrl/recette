@@ -1,10 +1,17 @@
-import { useEffect, useRef, useState } from 'react'
-import gsap from 'gsap'
-import { BookOpen, ChefHat, Maximize, RotateCcw, Sparkles, X } from 'lucide-react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import {
+  ArrowDown,
+  BookOpen,
+  ChefHat,
+  Maximize,
+  RotateCcw,
+  Sparkles,
+  X
+} from 'lucide-react'
 
 const sections = [
   { id: 'intro', label: 'Accueil' },
-  { id: 'method', label: 'Méthode' },
+  { id: 'method', label: 'Axes' },
   { id: 'ingredients', label: 'Ingrédients' },
   { id: 'transform', label: 'Transformation' },
   { id: 'dressage', label: 'Dressage' },
@@ -14,23 +21,23 @@ const sections = [
 const notes = {
   intro: {
     title: 'Introduction',
-    body: 'J’ai choisi le format recette parce que chez Ansamble, un bon résultat dépend des bons ingrédients, d’une bonne méthode et d’une exécution terrain rigoureuse. Le fil rouge de mon année : rendre les flux lisibles, les données fiables et les pratiques partageables.'
+    body: 'Le format recette me permet de raconter l’année autrement : comme un vrai parcours, où l’on passe des ingrédients à la méthode, puis au résultat. Le fil rouge reste le même : rendre les flux lisibles, la donnée fiable et les pratiques partageables.'
   },
   method: {
     title: 'Mise en place',
-    body: 'Cette partie pose les axes de l’année : vision multi-sites Grand Ouest, fiabilisation du portage, structuration de la donnée et démarche méthode. L’objectif est de raconter le sens des projets, pas d’afficher une liste de slides.'
+    body: 'Cette étape pose les grands chantiers : Grand Ouest multi-sites, portage de repas, Ansamble 2030 et la démarche méthode. L’objectif est de donner une direction claire avant d’entrer dans les détails.'
   },
   ingredients: {
     title: 'Ingrédients',
-    body: 'Les données deviennent des ingrédients. Clients, volumes, tournées, menus et KPI sont animés vers la marmite pour montrer que la donnée devient utile lorsqu’elle est rassemblée et structurée.'
+    body: 'Les données deviennent des ingrédients concrets : clients, volumes, tournées, menus et KPI. Chaque ingrédient rejoint la marmite pour symboliser la structuration progressive de la donnée.'
   },
   transform: {
     title: 'Transformation',
-    body: 'La cuisson symbolise le travail méthode : observer le terrain, cartographier les flux, structurer les données, tester les scénarios puis standardiser.'
+    body: 'La cuisson symbolise le moment où les constats deviennent actionnables : on observe, on cartographie, on structure, on teste, puis on standardise.'
   },
   dressage: {
     title: 'Dressage',
-    body: 'Le dressage montre les bénéfices attendus : moins d’erreurs terrain, plus de visibilité sur les flux, des décisions plus rapides et des standards plus faciles à partager entre sites.'
+    body: 'Le dressage représente les bénéfices attendus : moins d’erreurs, plus de visibilité, des décisions plus rapides et des standards partageables. La photo réelle sert ici de base crédible au rendu.'
   },
   final: {
     title: 'Conclusion',
@@ -38,46 +45,55 @@ const notes = {
   }
 }
 
-const ingredientItems = [
-  { id: 'clients', number: '01', label: 'Données clients', text: 'Qui livrer, à quelle maille, client final ou bénéficiaire.', pos: { left: '5%', top: '14%' } },
-  { id: 'volumes', number: '02', label: 'Volumes repas', text: 'Charge, répartition et équilibre entre ateliers.', pos: { right: '4%', top: '10%' } },
-  { id: 'tournees', number: '03', label: 'Tournées multi-sites', text: 'Temps, capacités, géographie et organisation des flux.', pos: { right: '0%', top: '46%' } },
-  { id: 'menus', number: '04', label: 'Régimes & menus', text: 'Composition des sacs, choix menus et contraintes alimentaires.', pos: { left: '5%', bottom: '14%' } },
-  { id: 'kpi', number: '05', label: 'KPI & référentiels', text: 'Erreurs, coûts, temps opérationnels et indicateurs communs.', pos: { right: '8%', bottom: '12%' } }
+const ingredientData = [
+  { id: 'clients', number: '01', label: 'Données clients', text: 'Qui livrer, à quelle maille, client final ou bénéficiaire.', pos: { left: '4%', top: '13%' } },
+  { id: 'volumes', number: '02', label: 'Volumes repas', text: 'Charge, répartition et équilibre entre ateliers.', pos: { right: '3%', top: '11%' } },
+  { id: 'tournees', number: '03', label: 'Tournées multi-sites', text: 'Temps, capacités, géographie et organisation des flux.', pos: { right: '1%', top: '47%' } },
+  { id: 'menus', number: '04', label: 'Régimes & menus', text: 'Composition des sacs, choix menus et contraintes alimentaires.', pos: { left: '5%', bottom: '12%' } },
+  { id: 'kpi', number: '05', label: 'KPI & référentiels', text: 'Erreurs, coûts, temps opérationnels et indicateurs communs.', pos: { right: '9%', bottom: '14%' } }
 ]
 
-function App() {
+const methodItems = [
+  ['01', 'Grand Ouest', 'Vision globale des flux', 'Comprendre les clients, les volumes, les tournées et les arbitrages multi-sites.'],
+  ['02', 'Portage de repas', 'Fiabilisation terrain', 'Guider la préparation, sécuriser les sacs et réduire les écarts.'],
+  ['03', 'Ansamble 2030', 'Donnée utile et partageable', 'Passer de fichiers dispersés à des référentiels réellement exploitables.'],
+  ['04', 'Méthode', 'Observer avant d’optimiser', 'Terrain, cartographie, scénarios, décision et standardisation.']
+]
+
+const transformSteps = ['Observer', 'Cartographier', 'Structurer', 'Tester', 'Standardiser']
+
+export default function App() {
   const [current, setCurrent] = useState(0)
   const [notesOpen, setNotesOpen] = useState(false)
   const sectionRefs = useRef([])
 
-  const scrollTo = (index) => {
+  const goTo = (index) => {
     const target = Math.max(0, Math.min(sections.length - 1, index))
     sectionRefs.current[target]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
   useEffect(() => {
-    const obs = new IntersectionObserver(
+    const observer = new IntersectionObserver(
       (entries) => {
         entries.forEach((entry) => {
           if (entry.isIntersecting) setCurrent(Number(entry.target.dataset.index))
         })
       },
-      { threshold: 0.58 }
+      { threshold: 0.56 }
     )
-    sectionRefs.current.forEach((section) => section && obs.observe(section))
-    return () => obs.disconnect()
+    sectionRefs.current.forEach((section) => section && observer.observe(section))
+    return () => observer.disconnect()
   }, [])
 
   useEffect(() => {
-    const handleScroll = () => {
+    const onScroll = () => {
       const max = document.documentElement.scrollHeight - window.innerHeight
       const progress = max > 0 ? (window.scrollY / max) * 100 : 0
-      document.documentElement.style.setProperty('--scroll-progress', `${progress}%`)
+      document.documentElement.style.setProperty('--progress', `${progress}%`)
     }
-    handleScroll()
-    window.addEventListener('scroll', handleScroll, { passive: true })
-    return () => window.removeEventListener('scroll', handleScroll)
+    onScroll()
+    window.addEventListener('scroll', onScroll, { passive: true })
+    return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
   useEffect(() => {
@@ -85,57 +101,75 @@ function App() {
       const key = event.key.toLowerCase()
       if (event.key === 'ArrowDown' || event.key === 'PageDown' || event.key === ' ') {
         event.preventDefault()
-        scrollTo(current + 1)
+        goTo(current + 1)
       }
       if (event.key === 'ArrowUp' || event.key === 'PageUp') {
         event.preventDefault()
-        scrollTo(current - 1)
+        goTo(current - 1)
       }
       if (key === 'n') setNotesOpen((v) => !v)
-      if (key === 'r') scrollTo(0)
       if (key === 'f') {
         if (!document.fullscreenElement) document.documentElement.requestFullscreen?.()
         else document.exitFullscreen?.()
       }
+      if (key === 'r') goTo(0)
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [current])
 
   return (
-    <main className="site">
-      <div className="grain" />
-      <Header current={current} onNav={scrollTo} onNotes={() => setNotesOpen(true)} />
-      <Progress />
+    <main className="site-shell">
+      <div className="global-grain" />
+      <SiteHeader current={current} onNav={goTo} onNotes={() => setNotesOpen(true)} />
+      <div className="global-progress"><span /></div>
 
-      <JourneySection id="intro" index={0} refs={sectionRefs}><Intro onNext={() => scrollTo(1)} /></JourneySection>
-      <JourneySection id="method" index={1} refs={sectionRefs}><Method /></JourneySection>
-      <JourneySection id="ingredients" index={2} refs={sectionRefs}><Ingredients /></JourneySection>
-      <JourneySection id="transform" index={3} refs={sectionRefs}><Transform /></JourneySection>
-      <JourneySection id="dressage" index={4} refs={sectionRefs}><Dressage /></JourneySection>
-      <JourneySection id="final" index={5} refs={sectionRefs}><Final onReplay={() => scrollTo(0)} /></JourneySection>
+      <Section id="intro" index={0} refs={sectionRefs}><IntroSection onNext={() => goTo(1)} /></Section>
+      <Section id="method" index={1} refs={sectionRefs}><MethodSection /></Section>
+      <Section id="ingredients" index={2} refs={sectionRefs}><IngredientsSection /></Section>
+      <Section id="transform" index={3} refs={sectionRefs}><TransformSection /></Section>
+      <Section id="dressage" index={4} refs={sectionRefs}><DressageSection /></Section>
+      <Section id="final" index={5} refs={sectionRefs}><ConclusionSection onReplay={() => goTo(0)} /></Section>
 
-      <ScrollCue current={current} onNext={() => scrollTo(current + 1)} />
+      {current < sections.length - 1 && (
+        <button className="scroll-pill" onClick={() => goTo(current + 1)}>
+          Scroll <ArrowDown size={16} />
+        </button>
+      )}
+
       <NotesPanel open={notesOpen} onClose={() => setNotesOpen(false)} sectionId={sections[current].id} />
     </main>
   )
 }
 
-function Header({ current, onNav, onNotes }) {
+function Section({ id, index, refs, children }) {
+  return (
+    <section id={id} data-index={index} ref={(el) => (refs.current[index] = el)} className={`journey-section ${id}`}>
+      {children}
+    </section>
+  )
+}
+
+function SiteHeader({ current, onNav, onNotes }) {
   return (
     <header className="topbar">
       <button className="brand" onClick={() => onNav(0)}>
         <span className="brand-mark"><ChefHat size={16} /></span>
-        <span><strong>ansamble</strong><small>Cuisiner le collectif</small></span>
+        <span>
+          <strong>ansamble</strong>
+          <small>Cuisiner le collectif</small>
+        </span>
       </button>
 
-      <nav className="site-menu" aria-label="Navigation du site">
+      <nav className="site-nav" aria-label="Navigation du parcours">
         {sections.map((item, index) => (
-          <button key={item.id} onClick={() => onNav(index)} className={current === index ? 'active' : ''}>{item.label}</button>
+          <button key={item.id} className={current === index ? 'active' : ''} onClick={() => onNav(index)}>
+            {item.label}
+          </button>
         ))}
       </nav>
 
-      <div className="top-actions">
+      <div className="header-actions">
         <button className="ghost-btn" onClick={onNotes}><BookOpen size={15} /> Notes</button>
         <button
           className="solid-btn"
@@ -151,176 +185,267 @@ function Header({ current, onNav, onNotes }) {
   )
 }
 
-function Progress() { return <div className="page-progress"><span /></div> }
-
-function JourneySection({ id, index, refs, children }) {
-  return <section id={id} data-index={index} ref={(el) => (refs.current[index] = el)} className={`journey-section ${id}`}>{children}</section>
+function Kicker({ children }) {
+  return <div className="kicker reveal">{children}</div>
 }
 
-function SectionKicker({ children }) { return <div className="kicker reveal">{children}</div> }
+function IntroSection({ onNext }) {
+  const rootRef = useRevealScope()
 
-function Intro({ onNext }) {
-  useReveal()
   return (
-    <div className="section-inner intro-grid">
-      <div className="intro-copy">
-        <div className="hero-chip reveal"><Sparkles size={14} /> Saison 2025/2026 · Projet logistique</div>
-        <h1 className="display-title reveal">Ma recette <em>logistique</em></h1>
-        <p className="lead reveal">Un vrai parcours web immersif pour montrer comment les flux, la donnée et les pratiques terrain deviennent une organisation plus lisible et plus fiable.</p>
-        <div className="tag-row reveal"><span>Grand Ouest multi-sites</span><span>Portage de repas</span><span>Ansamble 2030</span></div>
-        <button className="main-cta reveal" onClick={onNext}>Commencer le parcours</button>
-      </div>
-      <div className="intro-photo reveal">
-        <div className="floating-note"><strong>Fil rouge</strong><p>Rendre les flux lisibles, les données fiables et les pratiques partageables.</p></div>
+    <div className="section-frame intro-frame" ref={rootRef}>
+      <div className="split-layout">
+        <div className="copy-side">
+          <div className="hero-chip reveal"><Sparkles size={14} /> Saison 2025/2026 · Projet logistique</div>
+          <h1 className="display-title reveal">Ma recette <em>logistique</em></h1>
+          <p className="body-lead reveal">Un site immersif pour raconter comment les flux, la donnée et les pratiques terrain deviennent une organisation plus lisible et plus fiable.</p>
+          <div className="tag-row reveal">
+            <span>Grand Ouest multi-sites</span>
+            <span>Portage de repas</span>
+            <span>Ansamble 2030</span>
+          </div>
+          <button className="main-cta reveal" onClick={onNext}>Commencer le parcours</button>
+        </div>
+
+        <div className="hero-showcase reveal">
+          <div className="hero-photo-card">
+            <div className="hero-float-card">
+              <strong>Fil rouge</strong>
+              <p>Rendre les flux lisibles, les données fiables et les pratiques partageables.</p>
+            </div>
+            <div className="photo-glow photo-glow-a" />
+            <div className="photo-glow photo-glow-b" />
+          </div>
+        </div>
       </div>
     </div>
   )
 }
 
-function Method() {
-  useReveal()
-  const items = [
-    ['01', 'Grand Ouest', 'Vision globale des flux', 'Comprendre les clients, volumes, tournées et arbitrages multi-sites.'],
-    ['02', 'Portage de repas', 'Fiabilisation terrain', 'Guider la préparation, sécuriser les sacs et réduire les écarts.'],
-    ['03', 'Ansamble 2030', 'Donnée utile et partageable', 'Passer de fichiers dispersés à des référentiels réellement exploitables.'],
-    ['04', 'Méthode', 'Observer avant d’optimiser', 'Terrain, cartographie, scénarios, décision et standardisation.']
-  ]
+function MethodSection() {
+  const rootRef = useRevealScope()
+
   return (
-    <div className="section-inner method-grid">
-      <div>
-        <SectionKicker>La mise en place</SectionKicker>
-        <h2 className="display-title smaller reveal">Avant la recette, choisir les <em>bons axes.</em></h2>
-        <p className="lead reveal">La lecture se fait comme sur une page éditoriale : un fil continu, pas une succession de cartes figées.</p>
-        <blockquote className="method-quote reveal">Objectif : raconter l’année sans dashboard, en gardant uniquement les décisions fortes à l’écran.</blockquote>
-      </div>
-      <div className="method-rail">
-        {items.map(([number, label, title, text]) => (
-          <article className="method-row reveal" key={number}>
-            <div className="method-number">{number}</div>
-            <div><small>{label}</small><h3>{title}</h3><p>{text}</p></div>
-          </article>
-        ))}
+    <div className="section-frame" ref={rootRef}>
+      <div className="method-layout">
+        <div>
+          <Kicker>La mise en place</Kicker>
+          <h2 className="display-title smaller reveal">Avant la recette, choisir les <em>bons axes.</em></h2>
+          <p className="body-lead reveal">On quitte la logique slide pour une lecture plus fluide, comme un vrai site éditorial qui annonce les priorités avant l’exécution.</p>
+          <div className="quote-block reveal">
+            <span className="quote-line" />
+            <p>Objectif : raconter l’année sans dashboard, en gardant uniquement les décisions fortes à l’écran.</p>
+          </div>
+        </div>
+
+        <div className="method-rail">
+          {methodItems.map(([number, small, title, text]) => (
+            <article className="rail-row reveal" key={number}>
+              <div className="rail-number">{number}</div>
+              <div className="rail-texts">
+                <small>{small}</small>
+                <h3>{title}</h3>
+                <p>{text}</p>
+              </div>
+            </article>
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
-function Ingredients() {
-  const [selected, setSelected] = useState(ingredientItems[0])
+function IngredientsSection() {
+  const rootRef = useRevealScope()
+  const [selected, setSelected] = useState(ingredientData[0])
   const [added, setAdded] = useState([])
   const potRef = useRef(null)
-  const nodeRefs = useRef([])
-  useReveal()
 
-  useEffect(() => {
-    gsap.fromTo(
-      nodeRefs.current.filter(Boolean),
-      { opacity: 0, y: 28, scale: 0.92 },
-      { opacity: 1, y: 0, scale: 1, duration: 0.7, stagger: 0.08, ease: 'power3.out', delay: 0.25 }
-    )
-  }, [])
+  const progress = useMemo(() => `${(added.length / ingredientData.length) * 100}%`, [added])
 
-  const addIngredient = (ingredient, event) => {
-    setSelected(ingredient)
-    if (added.includes(ingredient.id)) return
+  const animateToPot = (event) => {
     const source = event.currentTarget.getBoundingClientRect()
     const pot = potRef.current?.getBoundingClientRect()
     if (!pot) return
-    const fly = document.createElement('div')
-    fly.className = 'flying-seed'
-    document.body.appendChild(fly)
-    const startX = source.left + source.width / 2
-    const startY = source.top + source.height / 2
-    const endX = pot.left + pot.width / 2
-    const endY = pot.top + pot.height / 2 + 10
-    const midX = (startX + endX) / 2
-    const midY = Math.min(startY, endY) - 120
-    gsap.set(fly, { x: startX, y: startY, opacity: 1, scale: 1 })
-    gsap.to(fly, {
-      duration: 0.95,
-      keyframes: [
-        { x: midX, y: midY, scale: 0.72, opacity: 0.95, ease: 'power2.out' },
-        { x: endX, y: endY, scale: 0.18, opacity: 0, ease: 'power2.in' }
+    const dot = document.createElement('div')
+    dot.className = 'flying-seed'
+    document.body.appendChild(dot)
+
+    const sx = source.left + source.width / 2
+    const sy = source.top + source.height / 2
+    const ex = pot.left + pot.width / 2
+    const ey = pot.top + pot.height / 2
+
+    dot.style.left = `${sx}px`
+    dot.style.top = `${sy}px`
+
+    dot.animate(
+      [
+        { transform: 'translate(0, 0) scale(1)', opacity: 1 },
+        { transform: `translate(${(ex - sx) * 0.45}px, ${(ey - sy) * 0.5 - 110}px) scale(.88)`, opacity: .95 },
+        { transform: `translate(${ex - sx}px, ${ey - sy}px) scale(.2)`, opacity: 0 }
       ],
-      onComplete: () => {
-        fly.remove()
-        setAdded((current) => [...current, ingredient.id])
-        gsap.fromTo(potRef.current, { scale: 1 }, { scale: 1.045, yoyo: true, repeat: 1, duration: 0.22 })
-      }
-    })
+      { duration: 820, easing: 'cubic-bezier(.2,.7,.2,1)' }
+    ).onfinish = () => dot.remove()
+
+    potRef.current.animate(
+      [
+        { transform: 'translate(-50%, -50%) scale(1)' },
+        { transform: 'translate(-50%, -50%) scale(1.04)' },
+        { transform: 'translate(-50%, -50%) scale(1)' }
+      ],
+      { duration: 420, easing: 'ease-in-out' }
+    )
+  }
+
+  const handleClick = (ingredient, event) => {
+    setSelected(ingredient)
+    if (!added.includes(ingredient.id)) {
+      setAdded((prev) => [...prev, ingredient.id])
+      animateToPot(event)
+    }
   }
 
   return (
-    <div className="section-inner ingredients-grid">
-      <div className="ingredients-copy">
-        <SectionKicker>Les ingrédients</SectionKicker>
-        <h2 className="display-title smaller reveal">Les données entrent dans la <em>marmite.</em></h2>
-        <p className="lead reveal">Les ingrédients sont espacés et animés. Chaque clic les fait entrer dans la recette, au lieu d’afficher une simple carte.</p>
-        <div className="ingredient-panel reveal"><span>Ingrédient sélectionné</span><h3>{selected.label}</h3><p>{selected.text}</p></div>
-        <div className="ingredient-panel progress-card reveal"><div className="mini-track"><b style={{ width: `${(added.length / ingredientItems.length) * 100}%` }} /></div><h3>{added.length} / {ingredientItems.length}</h3><p>Ingrédients ajoutés à la base de pilotage.</p></div>
-      </div>
-      <div className="ingredient-stage">
-        <div className={`real-pot ${added.length ? 'awake' : ''}`} ref={potRef}><span className="steam s1" /><span className="steam s2" /><span className="steam s3" /></div>
-        {ingredientItems.map((item, index) => (
-          <button ref={(el) => (nodeRefs.current[index] = el)} key={item.id} className={`ingredient-node ${selected.id === item.id ? 'selected' : ''} ${added.includes(item.id) ? 'added' : ''}`} style={item.pos} onClick={(event) => addIngredient(item, event)}>
-            <span className="dot" /><span className="num">{item.number}</span><span className="label">{item.label}</span>
-          </button>
-        ))}
+    <div className="section-frame ingredients-frame" ref={rootRef}>
+      <div className="ingredients-layout">
+        <div className="ingredients-side">
+          <Kicker>Les ingrédients</Kicker>
+          <h2 className="display-title smaller reveal">Les données entrent dans la <em>marmite.</em></h2>
+          <p className="body-lead reveal">Toute la 3D a été refaite : une scène plus propre, plus légère et plus premium, avec de vrais volumes et des éléments mieux espacés.</p>
+
+          <div className="info-card reveal">
+            <span>Ingrédient sélectionné</span>
+            <h3>{selected.label}</h3>
+            <p>{selected.text}</p>
+          </div>
+
+          <div className="info-card reveal">
+            <div className="mini-track"><b style={{ width: progress }} /></div>
+            <h3>{added.length} / {ingredientData.length}</h3>
+            <p>Ingrédients intégrés à la base de pilotage.</p>
+          </div>
+        </div>
+
+        <div className="ingredient-scene reveal">
+          <div className={`scene-3d ${added.length ? 'active' : ''}`}>
+            <div className="table-shadow" />
+            <div className="table-plane" />
+            <div className="pot-pedestal" />
+            <div className="real-pot" ref={potRef}>
+              <span className="steam s1" />
+              <span className="steam s2" />
+              <span className="steam s3" />
+            </div>
+          </div>
+
+          {ingredientData.map((item) => (
+            <button
+              key={item.id}
+              className={`ingredient-chip ${selected.id === item.id ? 'selected' : ''} ${added.includes(item.id) ? 'added' : ''}`}
+              style={item.pos}
+              onClick={(event) => handleClick(item, event)}
+            >
+              <span className="chip-dot" />
+              <span className="chip-number">{item.number}</span>
+              <span className="chip-label">{item.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )
 }
 
-function Transform() {
-  useReveal()
-  const steps = ['Observer', 'Cartographier', 'Structurer', 'Tester', 'Standardiser']
+function TransformSection() {
+  const rootRef = useRevealScope()
+
   return (
-    <div className="section-inner transform-grid">
-      <div>
-        <SectionKicker>La transformation</SectionKicker>
-        <h2 className="display-title smaller reveal">Transformer les constats terrain en <em>décisions.</em></h2>
-        <p className="lead reveal">La cuisson marque la transition : le terrain, les flux et la donnée deviennent une méthode de travail.</p>
-        <div className="step-row reveal">{steps.map((step, index) => <span key={step} className={index === 2 ? 'active' : ''}>{step}</span>)}</div>
+    <div className="section-frame" ref={rootRef}>
+      <div className="transform-layout">
+        <div>
+          <Kicker>La transformation</Kicker>
+          <h2 className="display-title smaller reveal">Transformer les constats terrain en <em>décisions.</em></h2>
+          <p className="body-lead reveal">Ici aussi, la 3D est simplifiée et renforcée : plus de faux objet plat, mais une scène de cuisson plus lisible, avec relief et profondeur.</p>
+          <div className="step-row reveal">
+            {transformSteps.map((step, index) => (
+              <span key={step} className={index === 2 ? 'active' : ''}>{step}</span>
+            ))}
+          </div>
+        </div>
+
+        <div className="oven-scene reveal">
+          <div className="oven-shell">
+            <div className="oven-top" />
+            <div className="oven-body" />
+            <div className="oven-cavity">
+              <div className="rack rack-a" />
+              <div className="rack rack-b" />
+              <div className="heat-orb heat-a" />
+              <div className="heat-orb heat-b" />
+              <div className="heat-orb heat-c" />
+              <div className="pot-in-oven" />
+            </div>
+            <div className="oven-floor-shadow" />
+          </div>
+        </div>
       </div>
-      <div className="oven-scene reveal"><div className="oven"><div className="oven-cavity"><span className="heat h1" /><span className="heat h2" /><span className="heat h3" /><span className="pot-in-oven" /></div></div></div>
     </div>
   )
 }
 
-function Dressage() {
-  useReveal()
-  const benefits = [['01', 'Moins d’erreurs terrain'], ['02', 'Meilleure visibilité des flux'], ['03', 'Décisions plus rapides'], ['04', 'Standards partageables entre sites']]
+function DressageSection() {
+  const rootRef = useRevealScope()
+  const benefits = [
+    ['01', 'Moins d’erreurs terrain'],
+    ['02', 'Meilleure visibilité des flux'],
+    ['03', 'Décisions plus rapides'],
+    ['04', 'Standards partageables']
+  ]
+
   return (
-    <div className="section-inner dressage-inner">
+    <div className="section-frame" ref={rootRef}>
       <div className="dressage-head">
-        <SectionKicker>Le dressage</SectionKicker>
+        <Kicker>Le dressage</Kicker>
         <h2 className="display-title smaller reveal">Le résultat se <em>sert</em> clairement.</h2>
-        <p className="lead reveal">La photo réelle remplace le rendu 3D artificiel. Le relief est léger, uniquement pour donner de la profondeur au site.</p>
+        <p className="body-lead reveal center">L’assiette a été entièrement refaite : on part de ta photo réelle, intégrée dans un volume discret et crédible, sans faux effet gadget.</p>
       </div>
+
       <div className="dressage-stage reveal">
-        {benefits.map(([number, text], index) => <div className={`benefit-card b${index + 1}`} key={number}><span>{number}</span><p>{text}</p></div>)}
-        <div className="photo-plate"><div className="plate-shadow" /><div className="plate-frame"><div className="plate-photo" /><div className="plate-shine" /></div></div>
+        {benefits.map(([number, text], index) => (
+          <div className={`benefit-card b${index + 1}`} key={number}>
+            <span>{number}</span>
+            <p>{text}</p>
+          </div>
+        ))}
+
+        <div className="plating-scene">
+          <div className="plating-shadow" />
+          <div className="plate-base" />
+          <div className="plate-rim" />
+          <div className="plate-photo" />
+          <div className="plate-gloss" />
+          <div className="plate-underlight" />
+        </div>
       </div>
     </div>
   )
 }
 
-function Final({ onReplay }) {
-  useReveal()
+function ConclusionSection({ onReplay }) {
+  const rootRef = useRevealScope()
+
   return (
-    <div className="section-inner final-inner">
+    <div className="section-frame" ref={rootRef}>
       <div className="final-card reveal">
-        <SectionKicker>Conclusion</SectionKicker>
-        <blockquote>Avant d’optimiser une organisation, il faut d’abord rendre ses flux <em>lisibles</em>, ses données <em>fiables</em> et ses pratiques <em>partageables</em>.</blockquote>
+        <Kicker>Conclusion</Kicker>
+        <blockquote>
+          Avant d’optimiser une organisation, il faut d’abord rendre ses flux <em>lisibles</em>, ses données <em>fiables</em> et ses pratiques <em>partageables</em>.
+        </blockquote>
         <button className="main-cta" onClick={onReplay}><RotateCcw size={16} /> Revoir le parcours</button>
       </div>
     </div>
   )
-}
-
-function ScrollCue({ current, onNext }) {
-  if (current === sections.length - 1) return null
-  return <button className="scroll-cue" onClick={onNext}>Scroll <span>↓</span></button>
 }
 
 function NotesPanel({ open, onClose, sectionId }) {
@@ -328,26 +453,36 @@ function NotesPanel({ open, onClose, sectionId }) {
   return (
     <aside className={`notes-panel ${open ? 'open' : ''}`}>
       <button className="notes-close" onClick={onClose}><X size={18} /></button>
-      <div className="kicker">Notes orales</div><h3>{data.title}</h3><p>{data.body}</p>
+      <div className="kicker">Notes orales</div>
+      <h3>{data.title}</h3>
+      <p>{data.body}</p>
     </aside>
   )
 }
 
-function useReveal() {
+function useRevealScope() {
+  const rootRef = useRef(null)
+
   useEffect(() => {
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
+    const root = rootRef.current
+    if (!root) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (!entry.isIntersecting) return
           entry.target.querySelectorAll('.reveal').forEach((el, index) => {
             el.style.setProperty('--delay', `${index * 0.055}s`)
             el.classList.add('visible')
           })
-        }
-      })
-    }, { threshold: 0.24 })
-    document.querySelectorAll('.journey-section').forEach((section) => observer.observe(section))
+        })
+      },
+      { threshold: 0.22 }
+    )
+
+    observer.observe(root)
     return () => observer.disconnect()
   }, [])
-}
 
-export default App
+  return rootRef
+}
