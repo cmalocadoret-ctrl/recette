@@ -1,7 +1,7 @@
 {
-  "name": "ansamble-recette-pro-refonte",
-  "private": true,
+  "name": "ansamble-recette-refonte-vraie",
   "version": "1.0.0",
+  "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0",
@@ -13,6 +13,7 @@
     "vite": "latest",
     "react": "latest",
     "react-dom": "latest",
+    "three": "latest",
     "lucide-react": "latest"
   },
   "devDependencies": {}

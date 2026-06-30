@@ -1,38 +1,28 @@
-# Ansamble · Ma recette logistique 2025/2026
+# Ansamble — Ma recette logistique 2025/2026
 
-Refonte complète professionnelle du mini-site de présentation.
+Refonte complète du mini-site narratif premium.
 
 ## Lancer en local
-
 ```bash
 npm install
 npm run dev
 ```
 
-## Build pour Vercel
+## Déployer sur Vercel
+- Framework preset : Vite
+- Build command : `npm run build`
+- Output directory : `dist`
 
-```bash
-npm run build
-```
+Le dossier `dist/` est inclus : un build a déjà été vérifié.
 
 ## Navigation
+- Boutons : Précédent, Suivant, Rejouer, Notes, Plein écran
+- Clavier : flèche droite / espace pour avancer, flèche gauche pour revenir, N pour les notes, F pour le plein écran, R pour rejouer
 
-- Bouton Suivant / Précédent
-- Bouton Rejouer
-- Bouton Notes
-- Bouton Plein écran
-- Flèche droite ou espace : avancer
-- Flèche gauche : revenir
-- N : notes
-- F : plein écran
-- R : rejouer
-
-## Direction artistique
-
-- Fond crème / papier naturel
-- Titres vert profond
-- Accents terracotta
-- Style éditorial premium
-- Illustrations culinaires vectorielles, sans photo
-- Scènes successives plein écran
-- Pas de mention Ansamble 2030
+## Refonte
+- Architecture neuve React + Vite + Three.js
+- Scènes plein écran successives
+- 3D recréée en WebGL : marmite, ingrédients, four, dressage final
+- Pas de photo pour la marmite, le four ou le dressage
+- Suppression des références affichées à “Ansamble 2030”
+- Responsive corrigé
