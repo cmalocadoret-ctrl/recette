@@ -1,13 +1,14 @@
-# Ansamble — Recette logistique 3D
+# Ansamble Recette Logistique — version immersive réaliste
 
-Mini-site de présentation interactif pour remplacer un PowerPoint classique.
+Cette version remplace le rendu 3D trop artificiel par un visuel photographique réaliste intégré directement au site.
 
-## Stack
+## Changements principaux
 
-- React + Vite
-- Three.js + @react-three/fiber + @react-three/drei
-- GSAP pour les transitions d'écran
-- CSS responsive premium / éditorial
+- Écran d’introduction : suppression du faux rendu 3D, intégration d’un fond photo réaliste plein écran.
+- Scène ingrédients : marmite réaliste issue de l’image intégrée au site.
+- Ingrédients : repositionnement en grand format avec davantage d’espace pour éviter les chevauchements.
+- Interaction : clic sur un ingrédient → animation vers la marmite + vapeur + progression.
+- Le site reste un projet React / Vite prêt à déployer sur Vercel.
 
 ## Lancer en local
 
@@ -16,25 +17,8 @@ npm install
 npm run dev
 ```
 
-## Build pour Vercel
+## Déployer sur Vercel
 
-```bash
-npm run build
-```
-
-Sur Vercel : importer le dossier comme projet. Framework preset : **Vite**. Build command : `npm run build`. Output directory : `dist`.
-
-## Navigation
-
-- Flèche droite ou espace : avancer
-- Flèche gauche : revenir
-- N : ouvrir/fermer les notes orales
-- F : plein écran
-- R : rejouer
-
-## Personnalisation rapide
-
-- Textes principaux : `src/App.jsx`
-- Couleurs / mise en page : `src/styles.css`
-- Notes orales : objet `notes` dans `src/App.jsx`
-- Ingrédients : tableau `ingredients` dans `src/App.jsx`
+Framework preset : Vite  
+Build command : `npm run build`  
+Output directory : `dist`

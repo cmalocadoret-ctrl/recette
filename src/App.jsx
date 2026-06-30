@@ -63,7 +63,10 @@ const ingredients = [
     short: 'Qui livrer, à quelle maille, client final ou bénéficiaire.',
     shape: 'peas',
     color: '#5F7D4E',
-    angle: 95
+    angle: 95,
+    x: '19%',
+    y: '22%',
+    side: 'right'
   },
   {
     id: 'volumes',
@@ -71,7 +74,10 @@ const ingredients = [
     short: 'Charge, répartition, équilibre entre sites.',
     shape: 'carrots',
     color: terracottaLight,
-    angle: 25
+    angle: 25,
+    x: '80%',
+    y: '18%',
+    side: 'left'
   },
   {
     id: 'tournees',
@@ -79,7 +85,10 @@ const ingredients = [
     short: 'Géographie, temps, capacité et organisation des flux.',
     shape: 'herbs',
     color: '#3F684A',
-    angle: -35
+    angle: -35,
+    x: '84%',
+    y: '72%',
+    side: 'left'
   },
   {
     id: 'menus',
@@ -87,7 +96,10 @@ const ingredients = [
     short: 'Composition des sacs, choix menus, contraintes alimentaires.',
     shape: 'lemon',
     color: '#D5A044',
-    angle: -145
+    angle: -145,
+    x: '18%',
+    y: '76%',
+    side: 'right'
   },
   {
     id: 'kpi',
@@ -95,7 +107,10 @@ const ingredients = [
     short: 'Erreurs, coûts, temps opérationnels et indicateurs communs.',
     shape: 'tomatoes',
     color: '#BB4B38',
-    angle: 170
+    angle: 170,
+    x: '85%',
+    y: '47%',
+    side: 'left'
   }
 ]
 
@@ -223,40 +238,30 @@ function Progress({ scene }) {
 
 function HeroScene({ onNext }) {
   return (
-    <div className="hero-layout">
-      <div className="hero-backdrop-canvas">
-        <Canvas shadows dpr={[1, 1.8]} camera={{ position: [0, 2.8, 8], fov: 45 }}>
-          <HeroFood3D />
-        </Canvas>
-      </div>
-      <div className="hero-card motion-in">
-        <div className="browser-bar">
+    <div className="hero-photo-layout">
+      <div className="photo-hero-background" />
+      <div className="photo-hero-shade" />
+      <div className="hero-site-frame motion-in">
+        <div className="site-frame-top">
           <span className="mini-brand"><ChefHat size={14} /> Ansamble Method Lab</span>
           <button onClick={onNext}>Commencer</button>
         </div>
-        <div className="hero-visual">
-          <Canvas shadows dpr={[1, 2]}>
-            <PerspectiveCamera makeDefault position={[0, 1.8, 6]} fov={42} />
-            <HeroFood3D compact />
-          </Canvas>
-          <div className="hero-overlay" />
-          <div className="hero-copy">
-            <div className="season-pill motion-in"><Sparkles size={14} /> Saison 2025/2026 · Projet logistique</div>
-            <h1 className="motion-in">Ma recette <span>logistique</span></h1>
-            <p className="motion-in">Rendre les flux lisibles, les données fiables et les pratiques partageables.</p>
-            <div className="hero-tags motion-in">
-              <span>Grand Ouest multi-sites</span>
-              <span>Portage de repas</span>
-              <span>Ansamble 2030</span>
-            </div>
-            <div className="hero-buttons motion-in">
-              <button className="primary-button" onClick={onNext}>Lancer la recette <ArrowRight size={17} /></button>
-              <button className="glass-button">5 à 7 min</button>
-            </div>
+        <div className="hero-copy immersive-copy">
+          <div className="season-pill motion-in"><Sparkles size={14} /> Saison 2025/2026 · Projet logistique</div>
+          <h1 className="motion-in">Ma recette <span>logistique</span></h1>
+          <p className="motion-in">Rendre les flux lisibles, les données fiables et les pratiques partageables.</p>
+          <div className="hero-tags motion-in">
+            <span>Grand Ouest multi-sites</span>
+            <span>Portage de repas</span>
+            <span>Ansamble 2030</span>
+          </div>
+          <div className="hero-buttons motion-in">
+            <button className="primary-button" onClick={onNext}>Lancer la recette <ArrowRight size={17} /></button>
+            <button className="glass-button">5 à 7 min</button>
           </div>
         </div>
       </div>
-      <p className="hero-caption motion-in">Un support interactif, pensé comme un mini-site de marque : 3D, navigation clavier, notes masquées et scène plein écran.</p>
+      <p className="hero-caption motion-in">Un mini-site immersif : fond photo réaliste, scènes plein écran, interactions, notes masquées et navigation clavier.</p>
     </div>
   )
 }
@@ -317,52 +322,131 @@ function ThemesScene() {
 
 function IngredientsScene() {
   const [collected, setCollected] = useState([])
+  const [active, setActive] = useState(ingredients[0].id)
+  const [flying, setFlying] = useState(null)
+  const potRef = useRef(null)
+  const flightRef = useRef(null)
   const selected = collected.length
-  const collect = (id) => setCollected((old) => old.includes(id) ? old : [...old, id])
+
+  const startFlight = (item, event) => {
+    if (collected.includes(item.id) || flying) return
+    const source = event.currentTarget.getBoundingClientRect()
+    const pot = potRef.current?.getBoundingClientRect()
+    if (!pot) return
+
+    setActive(item.id)
+    setFlying({ id: item.id, label: item.label, x: source.left + source.width / 2, y: source.top + source.height / 2 })
+
+    requestAnimationFrame(() => {
+      if (!flightRef.current) return
+      gsap.fromTo(
+        flightRef.current,
+        {
+          x: source.left + source.width / 2,
+          y: source.top + source.height / 2,
+          scale: 1,
+          opacity: 1,
+          rotate: -4
+        },
+        {
+          x: pot.left + pot.width / 2,
+          y: pot.top + pot.height / 2,
+          scale: 0.12,
+          opacity: 0,
+          rotate: 18,
+          duration: 0.95,
+          ease: 'power3.inOut',
+          onComplete: () => {
+            setCollected((old) => old.includes(item.id) ? old : [...old, item.id])
+            setFlying(null)
+          }
+        }
+      )
+    })
+  }
+
+  const activeItem = ingredients.find((item) => item.id === active) || ingredients[0]
 
   return (
-    <div className="ingredients-layout">
-      <div className="ingredients-copy">
-        <div className="kicker motion-in">Scène 03 · Les ingrédients</div>
-        <h2 className="section-title motion-in">Les données entrent dans la <em>marmite</em>.</h2>
-        <p className="lead motion-in">Clique sur les ingrédients : ils se détachent, entrent réellement dans la marmite 3D et déclenchent la progression de la recette.</p>
-        <div className="recipe-meter motion-in">
-          <div><span style={{ width: `${(selected / ingredients.length) * 100}%` }} /></div>
-          <strong>{selected} / {ingredients.length}</strong>
-          <small>{selected === ingredients.length ? 'Base prête pour la cuisson.' : 'Ingrédients ajoutés à la méthode.'}</small>
+    <div className="ingredients-immersive-layout">
+      <div className="ingredients-photo-bg" />
+      <div className="ingredients-vignette" />
+      <div className="ingredients-head motion-in">
+        <div className="kicker">Scène 03 · Les ingrédients</div>
+        <h2 className="section-title">Les données entrent dans la <em>marmite</em>.</h2>
+        <p className="lead">La scène utilise une vraie image réaliste : la marmite n’est plus un objet 3D basique, et les ingrédients sont placés largement autour pour éviter les superpositions.</p>
+      </div>
+
+      <IngredientHotspotStage
+        collected={collected}
+        activeItem={activeItem}
+        potRef={potRef}
+        onHover={setActive}
+        onCollect={startFlight}
+      />
+
+      <div className="recipe-meter floating-meter motion-in">
+        <div><span style={{ width: `${(selected / ingredients.length) * 100}%` }} /></div>
+        <strong>{selected} / {ingredients.length}</strong>
+        <small>{selected === ingredients.length ? 'Base prête pour la cuisson.' : 'Clique sur les ingrédients pour les ajouter.'}</small>
+      </div>
+
+      {flying && (
+        <div ref={flightRef} className="flying-ingredient" style={{ left: 0, top: 0 }}>
+          {flying.label}
         </div>
-      </div>
-      <div className="canvas-card motion-in">
-        <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 2.4, 7.2], fov: 44 }}>
-          <IngredientKitchen3D collected={collected} onCollect={collect} />
-        </Canvas>
-      </div>
+      )}
     </div>
   )
 }
 
-function IngredientKitchen3D({ collected, onCollect }) {
+function IngredientHotspotStage({ collected, activeItem, potRef, onHover, onCollect }) {
+  const positions = {
+    clients: { left: '20%', top: '25%', align: 'right' },
+    volumes: { left: '77%', top: '22%', align: 'left' },
+    tournees: { left: '78%', top: '75%', align: 'left' },
+    menus: { left: '23%', top: '72%', align: 'right' },
+    kpi: { left: '79%', top: '49%', align: 'left' }
+  }
+
   return (
-    <>
-      <color attach="background" args={['#f5ead5']} />
-      <ambientLight intensity={0.85} />
-      <directionalLight castShadow position={[3, 5, 4]} intensity={2.2} />
-      <pointLight position={[-3, 2, 3]} color={terracottaLight} intensity={1.2} />
-      <Pot3D progress={collected.length / ingredients.length} />
-      {ingredients.map((item) => (
-        <IngredientObject
-          key={item.id}
-          item={item}
-          collected={collected.includes(item.id)}
-          onCollect={() => onCollect(item.id)}
-        />
-      ))}
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.06, 0]}>
-        <planeGeometry args={[8.5, 6]} />
-        <meshStandardMaterial color="#eadcc4" roughness={0.95} />
-      </mesh>
-    </>
+    <div className="photo-kitchen-stage motion-in">
+      <img src="/assets/marmite-realiste.png" alt="Marmite réaliste entourée d'ingrédients espacés" />
+      <div ref={potRef} className="pot-target" aria-hidden="true">
+        <span />
+      </div>
+      <div className={`photo-steam ${collected.length > 0 ? 'active' : ''}`} aria-hidden="true">
+        <i /> <i /> <i />
+      </div>
+      {ingredients.map((item, index) => {
+        const p = positions[item.id]
+        const done = collected.includes(item.id)
+        return (
+          <button
+            key={item.id}
+            className={`hotspot-chip ${done ? 'done' : ''} ${activeItem.id === item.id ? 'is-active' : ''} align-${p.align}`}
+            style={{ left: p.left, top: p.top }}
+            onMouseEnter={() => onHover(item.id)}
+            onFocus={() => onHover(item.id)}
+            onClick={(event) => onCollect(item, event)}
+          >
+            <span>{String(index + 1).padStart(2, '0')}</span>
+            <strong>{item.label}</strong>
+            <small>{done ? 'Ajouté à la marmite' : 'Cliquer pour ajouter'}</small>
+          </button>
+        )
+      })}
+      <aside className="ingredient-focus-card">
+        <span>Ingrédient sélectionné</span>
+        <h3>{activeItem.label}</h3>
+        <p>{activeItem.short}</p>
+      </aside>
+    </div>
   )
+}
+
+function IngredientKitchen3D() {
+  return null
 }
 
 function IngredientObject({ item, collected, onCollect }) {
