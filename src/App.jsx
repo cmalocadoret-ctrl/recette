@@ -1,7 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Canvas, useFrame } from '@react-three/fiber'
-import { Float, Html, PerspectiveCamera } from '@react-three/drei'
-import * as THREE from 'three'
 import gsap from 'gsap'
 import {
   ArrowLeft,
@@ -14,17 +11,11 @@ import {
   X
 } from 'lucide-react'
 
-const deepGreen = '#243A2C'
-const terracotta = '#C66A3A'
-const terracottaLight = '#E0843F'
-const cream = '#F4E8D1'
-const dark = '#17120D'
-
 const scenes = [
-  { id: 'hero', label: 'Introduction' },
-  { id: 'themes', label: 'Mise en place' },
+  { id: 'hero', label: 'Accueil' },
+  { id: 'themes', label: 'Méthode' },
   { id: 'ingredients', label: 'Ingrédients' },
-  { id: 'cuisson', label: 'Cuisson' },
+  { id: 'oven', label: 'Cuisson' },
   { id: 'dressage', label: 'Dressage' },
   { id: 'conclusion', label: 'Conclusion' }
 ]
@@ -32,108 +23,114 @@ const scenes = [
 const notes = {
   hero: {
     title: 'Introduction',
-    body: `Bonjour à tous. J’ai choisi de présenter mon année sous la forme d’une recette, parce que chez Ansamble, un bon résultat dépend à la fois des bons ingrédients, d’une bonne méthode, et d’une vraie adaptation au terrain. Mon fil rouge cette année a été simple : rendre les flux plus lisibles, fiabiliser les données, et construire des pratiques plus faciles à partager entre les sites.`
+    body:
+      'Bonjour à tous. J’ai choisi de présenter mon année comme une recette logistique. Chez Ansamble, un bon résultat dépend des bons ingrédients, d’une bonne méthode et d’une exécution rigoureuse. Mon fil rouge a été de rendre les flux plus lisibles, les données plus fiables et les pratiques plus faciles à partager.'
   },
   themes: {
     title: 'Les grands axes',
-    body: `J’ai structuré mon année autour de quatre axes. D’abord, passer d’une vision locale des flux à une vision plus globale, notamment sur le Grand Ouest. Ensuite, fiabiliser le terrain avec le sujet du portage de repas. Troisième axe : la donnée, parce qu’on ne peut pas piloter durablement avec des informations dispersées. Enfin, une conviction méthode : avant d’optimiser, il faut observer, comprendre et cartographier.`
+    body:
+      'Trois projets structurent l’année : la réorganisation logistique Grand Ouest pour passer à une vision multi-sites, la digitalisation du portage de repas pour fiabiliser le terrain, et Ansamble 2030 pour structurer la donnée logistique. La logique méthode reste la même : observer, cartographier, tester, standardiser.'
   },
   ingredients: {
     title: 'Les ingrédients',
-    body: `Les projets reposent tous sur quelques ingrédients logistiques très concrets : les données clients, les volumes repas, les tournées, les contraintes multi-sites, les régimes, les menus et les indicateurs. Pris séparément, ce sont des informations de terrain. Une fois réunies, elles deviennent une vraie base de pilotage.`
+    body:
+      'Ici, les données deviennent des ingrédients concrets : clients, volumes, tournées, régimes et indicateurs. L’idée est simple : séparément, ce sont des informations éparses ; ensemble, elles nourrissent une vraie base de pilotage.'
   },
-  cuisson: {
-    title: 'La transformation',
-    body: `La cuisson représente le travail méthode : observer le terrain, cartographier les flux, structurer les données, tester des scénarios, puis formaliser des standards. C’est là que les constats terrain deviennent des décisions opérationnelles.`
+  oven: {
+    title: 'La cuisson',
+    body:
+      'La cuisson symbolise le travail méthode. On transforme les constats terrain en décisions : observation, cartographie, structuration de la donnée, test de scénarios puis standardisation.'
   },
   dressage: {
-    title: 'Les bénéfices',
-    body: `Le résultat attendu n’est pas seulement un outil ou une belle cartographie. C’est une logistique plus robuste : moins d’erreurs terrain, une meilleure visibilité des flux, des décisions plus rapides, et des standards plus faciles à partager entre les ateliers.`
+    title: 'Le dressage',
+    body:
+      'Le dressage correspond aux bénéfices attendus : moins d’erreurs terrain, plus de visibilité sur les flux, des décisions plus rapides et des standards plus facilement partageables entre sites.'
   },
   conclusion: {
     title: 'Conclusion',
-    body: `Cette année m’a montré qu’avant d’optimiser une organisation, il faut d’abord rendre ses flux lisibles, ses données fiables et ses pratiques partageables. C’est cette base qui permet ensuite de développer le portage et de faire grandir les pratiques logistiques.`
+    body:
+      'Cette année m’a montré qu’avant d’optimiser une organisation, il faut d’abord rendre ses flux lisibles, ses données fiables et ses pratiques partageables. C’est cette base qui permettra d’accompagner le développement du portage et d’ancrer des standards plus robustes.'
   }
 }
 
-const ingredients = [
+const ingredientItems = [
   {
     id: 'clients',
+    number: '01',
     label: 'Données clients',
     short: 'Qui livrer, à quelle maille, client final ou bénéficiaire.',
-    shape: 'peas',
-    color: '#5F7D4E',
-    angle: 95,
-    x: '19%',
-    y: '22%',
-    side: 'right'
+    project: 'Base commune à tous les projets',
+    position: { top: '18%', left: '7%' }
   },
   {
     id: 'volumes',
+    number: '02',
     label: 'Volumes repas',
-    short: 'Charge, répartition, équilibre entre sites.',
-    shape: 'carrots',
-    color: terracottaLight,
-    angle: 25,
-    x: '80%',
-    y: '18%',
-    side: 'left'
-  },
-  {
-    id: 'tournees',
-    label: 'Tournées multi-sites',
-    short: 'Géographie, temps, capacité et organisation des flux.',
-    shape: 'herbs',
-    color: '#3F684A',
-    angle: -35,
-    x: '84%',
-    y: '72%',
-    side: 'left'
-  },
-  {
-    id: 'menus',
-    label: 'Régimes & menus',
-    short: 'Composition des sacs, choix menus, contraintes alimentaires.',
-    shape: 'lemon',
-    color: '#D5A044',
-    angle: -145,
-    x: '18%',
-    y: '76%',
-    side: 'right'
+    short: 'Charge, répartition, équilibre entre ateliers.',
+    project: 'Réorganisation Grand Ouest',
+    position: { top: '18%', right: '6%' }
   },
   {
     id: 'kpi',
+    number: '03',
     label: 'KPI & référentiels',
-    short: 'Erreurs, coûts, temps opérationnels et indicateurs communs.',
-    shape: 'tomatoes',
-    color: '#BB4B38',
-    angle: 170,
-    x: '85%',
-    y: '47%',
-    side: 'left'
+    short: 'Erreurs, coûts, temps opérationnels, référentiels communs.',
+    project: 'Ansamble 2030',
+    position: { top: '45%', right: '2%' }
+  },
+  {
+    id: 'tournees',
+    number: '04',
+    label: 'Tournées multi-sites',
+    short: 'Géographie, temps, capacités et organisation des flux.',
+    project: 'Réorganisation Grand Ouest',
+    position: { bottom: '16%', right: '7%' }
+  },
+  {
+    id: 'menus',
+    number: '05',
+    label: 'Régimes & menus',
+    short: 'Composition des sacs, choix menus et contraintes alimentaires.',
+    project: 'Portage de repas',
+    position: { bottom: '14%', left: '7%' }
   }
+]
+
+const methodSteps = [
+  'Observer le terrain',
+  'Cartographier les flux',
+  'Structurer la donnée',
+  'Tester les scénarios',
+  'Standardiser'
 ]
 
 function App() {
   const [scene, setScene] = useState(0)
   const [notesOpen, setNotesOpen] = useState(false)
   const [replayKey, setReplayKey] = useState(0)
-  const sceneData = scenes[scene]
 
   const next = () => setScene((s) => Math.min(scenes.length - 1, s + 1))
   const prev = () => setScene((s) => Math.max(0, s - 1))
   const replay = () => {
     setReplayKey((k) => k + 1)
     setScene(0)
+    setNotesOpen(false)
   }
 
   useEffect(() => {
     const onKey = (event) => {
-      if (event.key === 'ArrowRight' || event.key === ' ') next()
-      if (event.key === 'ArrowLeft') prev()
-      if (event.key.toLowerCase() === 'n') setNotesOpen((v) => !v)
-      if (event.key.toLowerCase() === 'r') replay()
-      if (event.key.toLowerCase() === 'f') {
+      const key = event.key.toLowerCase()
+      if (event.key === 'ArrowRight' || event.key === ' ') {
+        event.preventDefault()
+        next()
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        prev()
+      }
+      if (key === 'n') setNotesOpen((v) => !v)
+      if (key === 'r') replay()
+      if (key === 'f') {
         if (!document.fullscreenElement) document.documentElement.requestFullscreen?.()
         else document.exitFullscreen?.()
       }
@@ -143,66 +140,86 @@ function App() {
   }, [])
 
   useEffect(() => {
+    const current = document.querySelector('.scene.is-active')
+    if (!current) return
     gsap.fromTo(
-      '.scene.is-active .motion-in',
+      current.querySelectorAll('.reveal'),
       { y: 28, opacity: 0, filter: 'blur(8px)' },
       { y: 0, opacity: 1, filter: 'blur(0px)', duration: 0.9, ease: 'power3.out', stagger: 0.08 }
     )
   }, [scene, replayKey])
 
   return (
-    <main className="app" data-scene={sceneData.id}>
+    <main className="site-shell" data-scene={scenes[scene].id}>
+      <BackgroundLayer />
       <AmbientGrain />
-      <TopBar scene={scene} setScene={setScene} onNotes={() => setNotesOpen(true)} onReplay={replay} />
-      <div className="presentation-shell">
-        <Progress scene={scene} />
-        <section className={`scene ${scene === 0 ? 'is-active' : ''}`} aria-hidden={scene !== 0}>
-          {scene === 0 && <HeroScene onNext={next} key={`hero-${replayKey}`} />}
+      <TopBar
+        scene={scene}
+        setScene={setScene}
+        onNotes={() => setNotesOpen(true)}
+        onReplay={replay}
+      />
+      <Progress scene={scene} />
+
+      <div className="scene-stage">
+        <section className={`scene ${scene === 0 ? 'is-active' : ''}`}>
+          {scene === 0 && <HeroScene onNext={next} />}
         </section>
-        <section className={`scene ${scene === 1 ? 'is-active' : ''}`} aria-hidden={scene !== 1}>
+        <section className={`scene ${scene === 1 ? 'is-active' : ''}`}>
           {scene === 1 && <ThemesScene />}
         </section>
-        <section className={`scene ${scene === 2 ? 'is-active' : ''}`} aria-hidden={scene !== 2}>
-          {scene === 2 && <IngredientsScene />}
+        <section className={`scene ${scene === 2 ? 'is-active' : ''}`}>
+          {scene === 2 && <IngredientsScene key={`ingredients-${replayKey}`} />}
         </section>
-        <section className={`scene ${scene === 3 ? 'is-active' : ''}`} aria-hidden={scene !== 3}>
+        <section className={`scene ${scene === 3 ? 'is-active' : ''}`}>
           {scene === 3 && <OvenScene />}
         </section>
-        <section className={`scene ${scene === 4 ? 'is-active' : ''}`} aria-hidden={scene !== 4}>
+        <section className={`scene ${scene === 4 ? 'is-active' : ''}`}>
           {scene === 4 && <DressageScene />}
         </section>
-        <section className={`scene ${scene === 5 ? 'is-active' : ''}`} aria-hidden={scene !== 5}>
+        <section className={`scene ${scene === 5 ? 'is-active' : ''}`}>
           {scene === 5 && <ConclusionScene onReplay={replay} />}
         </section>
       </div>
-      <SceneControls scene={scene} onPrev={prev} onNext={next} onReplay={replay} />
-      <NotesPanel open={notesOpen} onClose={() => setNotesOpen(false)} sceneId={sceneData.id} />
+
+      <SceneControls scene={scene} onPrev={prev} onNext={next} />
+      <NotesPanel open={notesOpen} onClose={() => setNotesOpen(false)} sceneId={scenes[scene].id} />
     </main>
   )
+}
+
+function BackgroundLayer() {
+  return (
+    <>
+      <div className="site-bg" />
+      <div className="site-overlay" />
+    </>
+  )
+}
+
+function AmbientGrain() {
+  return <div className="ambient-grain" aria-hidden="true" />
 }
 
 function TopBar({ scene, setScene, onNotes, onReplay }) {
   return (
     <header className="topbar">
-      <button className="brand-lockup" onClick={() => setScene(0)} aria-label="Retour à l'introduction">
+      <button className="brand-lockup" onClick={() => setScene(0)} aria-label="Retour à l'accueil">
         <span className="chef-dot"><ChefHat size={16} /></span>
         <span>
           <strong>ansamble</strong>
           <small>Cuisiner le collectif</small>
         </span>
       </button>
-      <nav className="nav-dots" aria-label="Navigation de la présentation">
+
+      <nav className="nav-dots" aria-label="Navigation principale">
         {scenes.map((item, index) => (
-          <button
-            key={item.id}
-            className={index === scene ? 'active' : ''}
-            onClick={() => setScene(index)}
-            title={item.label}
-          >
+          <button key={item.id} className={index === scene ? 'active' : ''} onClick={() => setScene(index)}>
             <span>{index + 1}</span>
           </button>
         ))}
       </nav>
+
       <div className="top-actions">
         <button className="ghost-button" onClick={onNotes}><BookOpen size={16} /> Notes</button>
         <button className="primary-button compact" onClick={() => {
@@ -215,19 +232,6 @@ function TopBar({ scene, setScene, onNotes, onReplay }) {
   )
 }
 
-function SceneControls({ scene, onPrev, onNext, onReplay }) {
-  return (
-    <div className="scene-controls">
-      <button onClick={onPrev} disabled={scene === 0}><ArrowLeft size={18} /> Précédent</button>
-      {scene < scenes.length - 1 ? (
-        <button className="next" onClick={onNext}>Suivant <ArrowRight size={18} /></button>
-      ) : (
-        <button className="next" onClick={onReplay}>Rejouer <RotateCcw size={18} /></button>
-      )}
-    </div>
-  )
-}
-
 function Progress({ scene }) {
   return (
     <div className="progress-line" aria-hidden="true">
@@ -236,285 +240,234 @@ function Progress({ scene }) {
   )
 }
 
-function HeroScene({ onNext }) {
+function SceneHeader({ eyebrow, title, accent, text, align = 'left' }) {
   return (
-    <div className="hero-photo-layout">
-      <div className="photo-hero-background" />
-      <div className="photo-hero-shade" />
-      <div className="hero-site-frame motion-in">
-        <div className="site-frame-top">
-          <span className="mini-brand"><ChefHat size={14} /> Ansamble Method Lab</span>
-          <button onClick={onNext}>Commencer</button>
-        </div>
-        <div className="hero-copy immersive-copy">
-          <div className="season-pill motion-in"><Sparkles size={14} /> Saison 2025/2026 · Projet logistique</div>
-          <h1 className="motion-in">Ma recette <span>logistique</span></h1>
-          <p className="motion-in">Rendre les flux lisibles, les données fiables et les pratiques partageables.</p>
-          <div className="hero-tags motion-in">
-            <span>Grand Ouest multi-sites</span>
-            <span>Portage de repas</span>
-            <span>Ansamble 2030</span>
-          </div>
-          <div className="hero-buttons motion-in">
-            <button className="primary-button" onClick={onNext}>Lancer la recette <ArrowRight size={17} /></button>
-            <button className="glass-button">5 à 7 min</button>
-          </div>
-        </div>
-      </div>
-      <p className="hero-caption motion-in">Un mini-site immersif : fond photo réaliste, scènes plein écran, interactions, notes masquées et navigation clavier.</p>
+    <div className={`scene-header ${align}`}>
+      <div className="eyebrow reveal">{eyebrow}</div>
+      <h1 className="scene-title reveal">
+        {title} {accent && <em>{accent}</em>}
+      </h1>
+      {text && <p className="scene-copy reveal">{text}</p>}
     </div>
   )
 }
 
-function HeroFood3D({ compact = false }) {
+function HeroScene({ onNext }) {
   return (
-    <>
-      <color attach="background" args={[compact ? '#16120d' : '#21170f']} />
-      <ambientLight intensity={0.75} />
-      <directionalLight position={[5, 6, 4]} intensity={2.5} castShadow />
-      <pointLight position={[-4, -2, 3]} intensity={1.6} color={terracottaLight} />
-      <group rotation={[0.15, 0, -0.05]} scale={compact ? 1 : 1.35}>
-        <Float speed={1.1} rotationIntensity={0.25} floatIntensity={0.35}>
-          <CarrotCluster position={[2.25, 0.15, 0]} rotation={[0.1, -0.7, -0.25]} scale={0.9} />
-        </Float>
-        <Float speed={0.9} rotationIntensity={0.15} floatIntensity={0.25}>
-          <PeaBowl position={[-2.2, -0.2, 0.2]} scale={0.95} />
-        </Float>
-        <Float speed={1.4} rotationIntensity={0.2} floatIntensity={0.25}>
-          <HerbBundle position={[0.2, 0.9, -0.45]} rotation={[0.4, 0.3, -0.15]} scale={1.0} />
-        </Float>
-        <Float speed={1.3} rotationIntensity={0.18} floatIntensity={0.2}>
-          <TomatoGroup position={[2.05, -1.1, 0.35]} scale={0.78} />
-        </Float>
-        <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.55, -0.5]}>
-          <planeGeometry args={[8, 5]} />
-          <meshStandardMaterial color="#382718" roughness={0.9} metalness={0.05} />
-        </mesh>
-      </group>
-    </>
+    <div className="scene-wrap hero-scene">
+      <div className="hero-visual" />
+      <div className="hero-gradient" />
+      <div className="hero-content">
+        <div className="hero-chip reveal"><Sparkles size={14} /> Saison 2025/2026 · Projet logistique</div>
+        <h1 className="hero-title reveal">
+          Ma recette <br />
+          <em>logistique</em>
+        </h1>
+        <p className="hero-copy reveal">
+          Rendre les flux lisibles, les données fiables et les pratiques partageables.
+        </p>
+        <div className="hero-tags reveal">
+          <span>Grand Ouest multi-sites</span>
+          <span>Portage de repas</span>
+          <span>Ansamble 2030</span>
+        </div>
+        <div className="hero-actions reveal">
+          <button className="primary-button" onClick={onNext}>Lancer la recette <ArrowRight size={16} /></button>
+          <span className="duration-pill">5 à 7 min</span>
+        </div>
+      </div>
+      <div className="hero-note reveal">Un mini-site immersif : une seule direction artistique, plein écran, navigation fluide et notes masquées.</div>
+    </div>
   )
 }
 
 function ThemesScene() {
-  const items = [
-    ['01', 'Vision globale des flux', 'Réorganisation logistique Grand Ouest : comprendre les clients, volumes, tournées et arbitrages multi-sites.'],
-    ['02', 'Fiabilisation terrain', 'Portage de repas : guider la préparation, sécuriser les sacs, réduire les écarts tout en gardant la cadence.'],
-    ['03', 'Donnée utile et partageable', 'Ansamble 2030 : passer de fichiers dispersés à des référentiels et indicateurs exploitables.'],
-    ['04', 'Observer avant d’optimiser', 'Une démarche méthodes : terrain, cartographie, scénarios, décision, standardisation.']
+  const cards = [
+    {
+      title: 'Réorganisation logistique Grand Ouest',
+      text: 'Passer d’une vision locale à une vision globale des flux, des volumes et des capacités entre ateliers.'
+    },
+    {
+      title: 'Digitalisation du portage de repas',
+      text: 'Fiabiliser la préparation, guider l’opérateur et réduire les erreurs sans complexifier le terrain.'
+    },
+    {
+      title: 'Structuration de la donnée — Ansamble 2030',
+      text: 'Créer des référentiels utiles, des indicateurs communs et une base fiable pour piloter et standardiser.'
+    },
+    {
+      title: 'Démarche méthode',
+      text: 'Observer, cartographier, tester, puis transformer les constats terrain en standards partageables.'
+    }
   ]
+
   return (
-    <div className="editorial-layout">
-      <div className="kicker motion-in">Scène 02 · La mise en place</div>
-      <h2 className="section-title motion-in">Avant la recette, choisir les <em>bons axes</em>.</h2>
-      <div className="theme-grid">
-        {items.map(([n, title, text]) => (
-          <article className="theme-card motion-in" key={n}>
-            <span>{n}</span>
-            <h3>{title}</h3>
-            <p>{text}</p>
-          </article>
-        ))}
+    <div className="scene-wrap themed-scene">
+      <div className="content-shell wide">
+        <SceneHeader
+          eyebrow="Scène 02 · La méthode"
+          title="Une année structurée en"
+          accent="trois projets et une démarche."
+          text="Même univers, même langage visuel : ici, on ne change pas de thème. On déroule la recette dans un seul site immersif."
+        />
+
+        <div className="themes-grid">
+          {cards.map((card) => (
+            <article className="theme-card reveal" key={card.title}>
+              <span className="theme-index">•</span>
+              <h3>{card.title}</h3>
+              <p>{card.text}</p>
+            </article>
+          ))}
+        </div>
       </div>
-      <div className="signature-note motion-in">Objectif : raconter l’année sans afficher un dashboard, en gardant uniquement les décisions fortes à l’écran.</div>
     </div>
   )
 }
 
 function IngredientsScene() {
-  const [collected, setCollected] = useState([])
-  const [active, setActive] = useState(ingredients[0].id)
-  const [flying, setFlying] = useState(null)
+  const [selectedId, setSelectedId] = useState('clients')
+  const [added, setAdded] = useState([])
+  const sceneRef = useRef(null)
   const potRef = useRef(null)
-  const flightRef = useRef(null)
-  const selected = collected.length
 
-  const startFlight = (item, event) => {
-    if (collected.includes(item.id) || flying) return
+  const selected = useMemo(
+    () => ingredientItems.find((item) => item.id === selectedId) ?? ingredientItems[0],
+    [selectedId]
+  )
+
+  const handleIngredient = (item, event) => {
+    setSelectedId(item.id)
+    if (added.includes(item.id)) return
+
     const source = event.currentTarget.getBoundingClientRect()
     const pot = potRef.current?.getBoundingClientRect()
     if (!pot) return
 
-    setActive(item.id)
-    setFlying({ id: item.id, label: item.label, x: source.left + source.width / 2, y: source.top + source.height / 2 })
+    const fly = document.createElement('div')
+    fly.className = 'ingredient-fly'
+    document.body.appendChild(fly)
 
-    requestAnimationFrame(() => {
-      if (!flightRef.current) return
-      gsap.fromTo(
-        flightRef.current,
-        {
-          x: source.left + source.width / 2,
-          y: source.top + source.height / 2,
-          scale: 1,
-          opacity: 1,
-          rotate: -4
-        },
-        {
-          x: pot.left + pot.width / 2,
-          y: pot.top + pot.height / 2,
-          scale: 0.12,
-          opacity: 0,
-          rotate: 18,
-          duration: 0.95,
-          ease: 'power3.inOut',
-          onComplete: () => {
-            setCollected((old) => old.includes(item.id) ? old : [...old, item.id])
-            setFlying(null)
-          }
-        }
-      )
+    const startX = source.left + source.width / 2
+    const startY = source.top + source.height / 2
+    const endX = pot.left + pot.width / 2
+    const endY = pot.top + pot.height / 2 + 26
+
+    gsap.set(fly, { x: startX, y: startY, scale: 1, opacity: 1 })
+    gsap.to(fly, {
+      duration: 0.8,
+      x: endX,
+      y: endY,
+      scale: 0.28,
+      ease: 'power2.inOut',
+      onComplete: () => {
+        fly.remove()
+        setAdded((current) => [...current, item.id])
+        gsap.fromTo(
+          potRef.current,
+          { scale: 1 },
+          { scale: 1.05, duration: 0.22, yoyo: true, repeat: 1, ease: 'power1.inOut' }
+        )
+      }
     })
   }
 
-  const activeItem = ingredients.find((item) => item.id === active) || ingredients[0]
+  const count = added.length
 
   return (
-    <div className="ingredients-immersive-layout">
-      <div className="ingredients-photo-bg" />
-      <div className="ingredients-vignette" />
-      <div className="ingredients-head motion-in">
-        <div className="kicker">Scène 03 · Les ingrédients</div>
-        <h2 className="section-title">Les données entrent dans la <em>marmite</em>.</h2>
-        <p className="lead">La scène utilise une vraie image réaliste : la marmite n’est plus un objet 3D basique, et les ingrédients sont placés largement autour pour éviter les superpositions.</p>
-      </div>
+    <div className="scene-wrap ingredients-scene" ref={sceneRef}>
+      <div className="ingredients-backdrop" />
+      <div className="ingredients-overlay" />
+      <div className="ingredients-layout">
+        <aside className="ingredient-side reveal">
+          <div className="eyebrow">Scène 03 · Les ingrédients</div>
+          <h1 className="scene-title compact">Les données entrent dans la <em>marmite.</em></h1>
+          <p className="scene-copy compact">
+            La marmite devient un vrai visuel réaliste et les ingrédients sont volontairement espacés tout autour pour éviter les superpositions.
+          </p>
 
-      <IngredientHotspotStage
-        collected={collected}
-        activeItem={activeItem}
-        potRef={potRef}
-        onHover={setActive}
-        onCollect={startFlight}
-      />
+          <div className="selected-card">
+            <span className="selected-kicker">Ingrédient sélectionné</span>
+            <h3>{selected.label}</h3>
+            <p>{selected.short}</p>
+            <small>{selected.project}</small>
+          </div>
 
-      <div className="recipe-meter floating-meter motion-in">
-        <div><span style={{ width: `${(selected / ingredients.length) * 100}%` }} /></div>
-        <strong>{selected} / {ingredients.length}</strong>
-        <small>{selected === ingredients.length ? 'Base prête pour la cuisson.' : 'Clique sur les ingrédients pour les ajouter.'}</small>
-      </div>
+          <div className="progress-card">
+            <div className="mini-track"><span style={{ width: `${(count / ingredientItems.length) * 100}%` }} /></div>
+            <strong>{count} / {ingredientItems.length}</strong>
+            <p>Clique sur les ingrédients pour les ajouter à la marmite.</p>
+          </div>
+        </aside>
 
-      {flying && (
-        <div ref={flightRef} className="flying-ingredient" style={{ left: 0, top: 0 }}>
-          {flying.label}
+        <div className="pot-stage reveal">
+          <div className={`pot-real ${count > 0 ? 'is-awake' : ''}`} ref={potRef} />
+          <div className="pot-glow" />
+          {ingredientItems.map((item) => (
+            <button
+              key={item.id}
+              className={`ingredient-chip ${selectedId === item.id ? 'is-selected' : ''} ${added.includes(item.id) ? 'is-added' : ''}`}
+              style={item.position}
+              onClick={(event) => handleIngredient(item, event)}
+            >
+              <span className="dot" />
+              <span className="ingredient-number">{item.number}</span>
+              <span className="ingredient-label">{item.label}</span>
+            </button>
+          ))}
         </div>
-      )}
+      </div>
     </div>
   )
-}
-
-function IngredientHotspotStage({ collected, activeItem, potRef, onHover, onCollect }) {
-  const positions = {
-    clients: { left: '20%', top: '25%', align: 'right' },
-    volumes: { left: '77%', top: '22%', align: 'left' },
-    tournees: { left: '78%', top: '75%', align: 'left' },
-    menus: { left: '23%', top: '72%', align: 'right' },
-    kpi: { left: '79%', top: '49%', align: 'left' }
-  }
-
-  return (
-    <div className="photo-kitchen-stage motion-in">
-      <img src="/assets/marmite-realiste.png" alt="Marmite réaliste entourée d'ingrédients espacés" />
-      <div ref={potRef} className="pot-target" aria-hidden="true">
-        <span />
-      </div>
-      <div className={`photo-steam ${collected.length > 0 ? 'active' : ''}`} aria-hidden="true">
-        <i /> <i /> <i />
-      </div>
-      {ingredients.map((item, index) => {
-        const p = positions[item.id]
-        const done = collected.includes(item.id)
-        return (
-          <button
-            key={item.id}
-            className={`hotspot-chip ${done ? 'done' : ''} ${activeItem.id === item.id ? 'is-active' : ''} align-${p.align}`}
-            style={{ left: p.left, top: p.top }}
-            onMouseEnter={() => onHover(item.id)}
-            onFocus={() => onHover(item.id)}
-            onClick={(event) => onCollect(item, event)}
-          >
-            <span>{String(index + 1).padStart(2, '0')}</span>
-            <strong>{item.label}</strong>
-            <small>{done ? 'Ajouté à la marmite' : 'Cliquer pour ajouter'}</small>
-          </button>
-        )
-      })}
-      <aside className="ingredient-focus-card">
-        <span>Ingrédient sélectionné</span>
-        <h3>{activeItem.label}</h3>
-        <p>{activeItem.short}</p>
-      </aside>
-    </div>
-  )
-}
-
-function IngredientKitchen3D() {
-  return null
-}
-
-function IngredientObject({ item, collected, onCollect }) {
-  const ref = useRef()
-  const progress = useRef(0)
-  const angle = THREE.MathUtils.degToRad(item.angle)
-  const start = useMemo(() => new THREE.Vector3(Math.cos(angle) * 2.75, 0.1, Math.sin(angle) * 1.6), [angle])
-  const target = useMemo(() => new THREE.Vector3(0, 0.55, 0), [])
-
-  useFrame((state, delta) => {
-    progress.current = THREE.MathUtils.damp(progress.current, collected ? 1 : 0, 4.2, delta)
-    const p = progress.current
-    const arc = Math.sin(p * Math.PI) * 1.65
-    const x = THREE.MathUtils.lerp(start.x, target.x, p)
-    const y = THREE.MathUtils.lerp(start.y, target.y, p) + arc
-    const z = THREE.MathUtils.lerp(start.z, target.z, p)
-    if (ref.current) {
-      ref.current.position.set(x, y, z)
-      ref.current.rotation.y += delta * (collected ? 2 : 0.45)
-      ref.current.scale.setScalar(THREE.MathUtils.lerp(1, 0.08, Math.max(0, (p - 0.85) / 0.15)))
-      ref.current.visible = p < 0.99
-    }
-  })
-
-  return (
-    <group ref={ref} onClick={(e) => { e.stopPropagation(); onCollect() }}>
-      <Float speed={1.2} floatIntensity={0.25} rotationIntensity={0.18}>
-        <IngredientShape item={item} />
-        <Html center distanceFactor={8} position={[0, -0.78, 0]} occlude>
-          <button className="ingredient-label" onClick={onCollect}>
-            <strong>{item.label}</strong>
-            <small>{item.short}</small>
-          </button>
-        </Html>
-      </Float>
-    </group>
-  )
-}
-
-function IngredientShape({ item }) {
-  if (item.shape === 'carrots') return <CarrotCluster scale={0.36} />
-  if (item.shape === 'peas') return <PeaBowl scale={0.42} />
-  if (item.shape === 'herbs') return <HerbBundle scale={0.44} />
-  if (item.shape === 'lemon') return <LemonSlice color={item.color} />
-  return <TomatoGroup scale={0.35} />
 }
 
 function OvenScene() {
-  const steps = ['Observer le terrain', 'Cartographier les flux', 'Structurer la donnée', 'Tester les scénarios', 'Standardiser']
-  const [activeStep, setActiveStep] = useState(0)
+  const [activeStep, setActiveStep] = useState(2)
+
   useEffect(() => {
-    const id = setInterval(() => setActiveStep((s) => (s + 1) % steps.length), 1250)
-    return () => clearInterval(id)
+    const interval = setInterval(() => {
+      setActiveStep((step) => (step + 1) % methodSteps.length)
+    }, 1500)
+    return () => clearInterval(interval)
   }, [])
 
   return (
-    <div className="oven-layout">
-      <div className="kicker motion-in">Scène 04 · La cuisson</div>
-      <h2 className="section-title light motion-in">Transformer les constats terrain en <em>décisions</em>.</h2>
-      <div className="oven-canvas motion-in">
-        <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 2.2, 7], fov: 42 }}>
-          <Oven3D activeStep={activeStep} />
-        </Canvas>
-      </div>
-      <div className="method-track motion-in">
-        {steps.map((step, index) => (
-          <span key={step} className={index === activeStep ? 'active' : ''}>{step}</span>
-        ))}
+    <div className="scene-wrap oven-scene">
+      <div className="content-shell centered">
+        <SceneHeader
+          eyebrow="Scène 04 · La cuisson"
+          title="Transformer les constats terrain en"
+          accent="décisions."
+          align="center"
+        />
+
+        <div className="oven-immersive reveal">
+          <div className="oven-room">
+            <div className="oven-shadow" />
+            <div className="oven-box">
+              <div className="oven-door" />
+              <div className="oven-interior">
+                <div className="heat haze-1" />
+                <div className="heat haze-2" />
+                <div className="heat haze-3" />
+                <div className="pot-cutout" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="method-pills reveal">
+          {methodSteps.map((step, index) => (
+            <button
+              key={step}
+              type="button"
+              className={index === activeStep ? 'active' : ''}
+              onClick={() => setActiveStep(index)}
+            >
+              {step}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   )
@@ -526,21 +479,40 @@ function DressageScene() {
     'Meilleure visibilité des flux',
     'Décisions plus rapides',
     'Standards partageables entre sites',
-    'Logistique plus robuste pour accompagner le portage'
+    'Logistique plus robuste pour le portage'
   ]
+
   return (
-    <div className="dressage-layout">
-      <div className="dish-canvas motion-in">
-        <Canvas shadows dpr={[1, 2]} camera={{ position: [0, 2.8, 7], fov: 43 }}>
-          <Plate3D />
-        </Canvas>
-      </div>
-      <div className="benefits-panel">
-        <div className="kicker motion-in">Scène 05 · Le dressage final</div>
-        <h2 className="section-title motion-in">Ce que la recette <em>donne en bouche</em>.</h2>
-        <ul>
-          {benefits.map((benefit, index) => <li className="motion-in" key={benefit}><span>{String(index + 1).padStart(2, '0')}</span>{benefit}</li>)}
-        </ul>
+    <div className="scene-wrap dressage-scene">
+      <div className="content-shell dressage-layout">
+        <div>
+          <SceneHeader
+            eyebrow="Scène 05 · Le dressage"
+            title="Une logistique servie de façon"
+            accent="claire et robuste."
+            text="Le dressage n’est plus une slide finale : c’est une scène à part entière, avec une assiette en relief et une finition plus premium."
+          />
+
+          <ul className="benefits-list reveal">
+            {benefits.map((item, index) => (
+              <li key={item}><span>{String(index + 1).padStart(2, '0')}</span>{item}</li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="plate-stage reveal">
+          <div className="plate-cloche" />
+          <div className="plate-shadow" />
+          <div className="plate-3d">
+            <div className="plate-rim" />
+            <div className="plate-inner" />
+            <div className="garnish garnish-a" />
+            <div className="garnish garnish-b" />
+            <div className="garnish garnish-c" />
+            <div className="main-quenelle" />
+            <div className="micro-herbs" />
+          </div>
+        </div>
       </div>
     </div>
   )
@@ -548,292 +520,38 @@ function DressageScene() {
 
 function ConclusionScene({ onReplay }) {
   return (
-    <div className="conclusion-layout">
-      <Canvas className="conclusion-canvas" dpr={[1, 2]} camera={{ position: [0, 1.6, 7], fov: 45 }}>
-        <Conclusion3D />
-      </Canvas>
-      <div className="conclusion-copy">
-        <div className="kicker light motion-in">Conclusion</div>
-        <blockquote className="motion-in">Avant d’optimiser une organisation, il faut d’abord rendre ses flux lisibles, ses données fiables et ses pratiques partageables.</blockquote>
-        <p className="motion-in">Ma recette logistique 2025/2026 · Ansamble</p>
-        <button className="primary-button motion-in" onClick={onReplay}>Rejouer l’expérience <RotateCcw size={17} /></button>
+    <div className="scene-wrap conclusion-scene">
+      <div className="conclusion-overlay" />
+      <div className="content-shell centered narrow">
+        <div className="eyebrow reveal">Scène 06 · Conclusion</div>
+        <blockquote className="closing-quote reveal">
+          Avant d’optimiser une organisation, il faut d’abord rendre ses flux <em>lisibles</em>, ses données <em>fiables</em> et ses pratiques <em>partageables</em>.
+        </blockquote>
+        <button className="primary-button reveal" onClick={onReplay}>Revoir la recette <RotateCcw size={16} /></button>
       </div>
     </div>
   )
 }
 
+function SceneControls({ scene, onPrev, onNext }) {
+  return (
+    <div className="scene-controls">
+      <button className="ghost-button" onClick={onPrev} disabled={scene === 0}><ArrowLeft size={16} /> Précédent</button>
+      <button className="primary-button" onClick={onNext} disabled={scene === scenes.length - 1}>Suivant <ArrowRight size={16} /></button>
+    </div>
+  )
+}
+
 function NotesPanel({ open, onClose, sceneId }) {
-  const current = notes[sceneId]
+  const data = notes[sceneId]
+
   return (
     <aside className={`notes-panel ${open ? 'open' : ''}`}>
-      <button className="close-notes" onClick={onClose}><X size={20} /></button>
-      <span className="notes-eyebrow">Notes orales</span>
-      <h3>{current.title}</h3>
-      <p>{current.body}</p>
-      <div className="shortcuts">
-        <strong>Raccourcis</strong>
-        <span>→ / Espace : avancer</span>
-        <span>← : revenir</span>
-        <span>N : notes · F : plein écran · R : rejouer</span>
-      </div>
+      <button className="notes-close" onClick={onClose}><X size={18} /></button>
+      <div className="notes-kicker">Notes orales</div>
+      <h3>{data.title}</h3>
+      <p>{data.body}</p>
     </aside>
-  )
-}
-
-function AmbientGrain() {
-  return <div className="ambient-grain" />
-}
-
-/* ---------- 3D PRIMITIVES ---------- */
-
-function Pot3D({ progress = 0 }) {
-  const ref = useRef()
-  const fillRef = useRef()
-  useFrame((state) => {
-    if (ref.current) ref.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.4) * 0.06
-    if (fillRef.current) fillRef.current.scale.y = THREE.MathUtils.lerp(fillRef.current.scale.y, Math.max(0.03, progress), 0.08)
-  })
-  return (
-    <group ref={ref} position={[0, -0.15, 0]}>
-      <mesh castShadow receiveShadow position={[0, 0, 0]}>
-        <cylinderGeometry args={[1.28, 1.45, 1.18, 64, 1, true]} />
-        <meshStandardMaterial color={deepGreen} roughness={0.55} metalness={0.18} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh castShadow position={[0, 0.62, 0]}>
-        <torusGeometry args={[1.28, 0.055, 12, 64]} />
-        <meshStandardMaterial color="#1a2d22" roughness={0.45} metalness={0.28} />
-      </mesh>
-      <mesh ref={fillRef} position={[0, -0.43, 0]} scale={[1, Math.max(0.03, progress), 1]}>
-        <cylinderGeometry args={[1.17, 1.22, 0.55, 64]} />
-        <meshStandardMaterial color={terracotta} roughness={0.7} metalness={0.08} transparent opacity={0.82} />
-      </mesh>
-      <group position={[0, 0.75, 0]}>
-        {Array.from({ length: 9 }).map((_, i) => (
-          <SteamBubble key={i} delay={i * 0.4} x={(i % 3 - 1) * 0.35} z={(Math.floor(i / 3) - 1) * 0.22} active={progress > 0.2} />
-        ))}
-      </group>
-      <mesh position={[-1.47, 0.1, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <torusGeometry args={[0.25, 0.035, 10, 24, Math.PI]} />
-        <meshStandardMaterial color="#1a2d22" />
-      </mesh>
-      <mesh position={[1.47, 0.1, 0]} rotation={[0, 0, -Math.PI / 2]}>
-        <torusGeometry args={[0.25, 0.035, 10, 24, Math.PI]} />
-        <meshStandardMaterial color="#1a2d22" />
-      </mesh>
-    </group>
-  )
-}
-
-function SteamBubble({ x, z, delay, active }) {
-  const ref = useRef()
-  useFrame((state) => {
-    const t = (state.clock.elapsedTime + delay) % 3
-    const p = t / 3
-    if (ref.current) {
-      ref.current.position.set(x + Math.sin(t * 2) * 0.08, p * 1.15, z)
-      ref.current.scale.setScalar(0.15 + p * 0.55)
-      ref.current.material.opacity = active ? (1 - p) * 0.28 : 0
-    }
-  })
-  return (
-    <mesh ref={ref}>
-      <sphereGeometry args={[0.1, 16, 16]} />
-      <meshStandardMaterial color="#ffffff" transparent opacity={0} depthWrite={false} />
-    </mesh>
-  )
-}
-
-function CarrotCluster(props) {
-  return (
-    <group {...props}>
-      {[0, 1, 2].map((i) => (
-        <group key={i} rotation={[0.2, 0, -0.45 + i * 0.25]} position={[i * 0.22 - 0.22, i * 0.03, 0]}>
-          <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
-            <coneGeometry args={[0.11, 1.1, 22]} />
-            <meshStandardMaterial color={terracottaLight} roughness={0.75} />
-          </mesh>
-          <mesh castShadow position={[0, 0.58, 0]}>
-            <coneGeometry args={[0.2, 0.36, 8]} />
-            <meshStandardMaterial color="#496e3d" roughness={0.8} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  )
-}
-
-function PeaBowl(props) {
-  return (
-    <group {...props}>
-      <mesh castShadow receiveShadow rotation={[0, 0, 0]}>
-        <sphereGeometry args={[0.58, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-        <meshStandardMaterial color="#efe2c7" roughness={0.7} metalness={0.05} side={THREE.DoubleSide} />
-      </mesh>
-      {Array.from({ length: 14 }).map((_, i) => {
-        const a = (i / 14) * Math.PI * 2
-        const r = 0.15 + (i % 4) * 0.075
-        return (
-          <mesh castShadow key={i} position={[Math.cos(a) * r, 0.1 + (i % 3) * 0.025, Math.sin(a) * r]}>
-            <sphereGeometry args={[0.075, 16, 16]} />
-            <meshStandardMaterial color="#5F7D4E" roughness={0.75} />
-          </mesh>
-        )
-      })}
-    </group>
-  )
-}
-
-function HerbBundle(props) {
-  return (
-    <group {...props}>
-      {Array.from({ length: 9 }).map((_, i) => (
-        <group key={i} rotation={[0, 0, -0.55 + i * 0.14]} position={[0, 0, 0]}>
-          <mesh castShadow position={[0, 0.32, 0]} rotation={[0, 0, 0]}>
-            <cylinderGeometry args={[0.015, 0.02, 1.2, 8]} />
-            <meshStandardMaterial color="#3F684A" roughness={0.9} />
-          </mesh>
-          <mesh castShadow position={[0.05, 0.86, 0]} rotation={[0, 0, 0.45]}>
-            <sphereGeometry args={[0.11, 16, 16]} />
-            <meshStandardMaterial color="#4E7D52" roughness={0.8} />
-          </mesh>
-        </group>
-      ))}
-      <mesh position={[0, 0.2, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.24, 0.025, 8, 32]} />
-        <meshStandardMaterial color="#b66a44" roughness={0.85} />
-      </mesh>
-    </group>
-  )
-}
-
-function TomatoGroup(props) {
-  return (
-    <group {...props}>
-      {[[-0.25, 0, 0], [0.08, 0.08, 0.08], [0.32, -0.02, -0.05], [0.05, -0.22, 0.1]].map((pos, i) => (
-        <mesh castShadow key={i} position={pos}>
-          <sphereGeometry args={[0.18, 24, 24]} />
-          <meshStandardMaterial color="#BB4B38" roughness={0.62} />
-        </mesh>
-      ))}
-      <mesh position={[0.05, 0.28, 0]} rotation={[0.6, 0, 0.8]}>
-        <cylinderGeometry args={[0.018, 0.018, 0.8, 8]} />
-        <meshStandardMaterial color="#3F684A" />
-      </mesh>
-    </group>
-  )
-}
-
-function LemonSlice({ color = '#D5A044' }) {
-  return (
-    <group>
-      <mesh castShadow rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.42, 0.42, 0.09, 48]} />
-        <meshStandardMaterial color={color} roughness={0.7} />
-      </mesh>
-      <mesh position={[0, 0.055, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.43, 0.02, 8, 48]} />
-        <meshStandardMaterial color="#fff0ad" roughness={0.8} />
-      </mesh>
-    </group>
-  )
-}
-
-function Oven3D({ activeStep }) {
-  const ovenRef = useRef()
-  const glowRef = useRef()
-  useFrame((state) => {
-    if (ovenRef.current) ovenRef.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.35) * 0.07
-    if (glowRef.current) glowRef.current.material.emissiveIntensity = 0.9 + Math.sin(state.clock.elapsedTime * 2) * 0.35 + activeStep * 0.03
-  })
-  return (
-    <>
-      <color attach="background" args={[dark]} />
-      <ambientLight intensity={0.65} />
-      <directionalLight position={[3, 4, 5]} intensity={2.2} castShadow />
-      <pointLight position={[0, 0, 2.5]} color={terracottaLight} intensity={2.4} />
-      <group ref={ovenRef}>
-        <mesh castShadow receiveShadow>
-          <boxGeometry args={[2.8, 2.15, 1.55]} />
-          <meshStandardMaterial color="#241a12" roughness={0.7} metalness={0.15} />
-        </mesh>
-        <mesh position={[0, 0, 0.82]}>
-          <boxGeometry args={[2.18, 1.38, 0.06]} />
-          <meshStandardMaterial color="#392719" roughness={0.5} metalness={0.25} />
-        </mesh>
-        <mesh ref={glowRef} position={[0, -0.05, 0.87]}>
-          <boxGeometry args={[1.8, 1.05, 0.04]} />
-          <meshStandardMaterial color={terracottaLight} emissive={terracottaLight} emissiveIntensity={1.1} transparent opacity={0.55} />
-        </mesh>
-        <group position={[0, -0.18, 1.02]} scale={0.55}>
-          <Pot3D progress={0.95} />
-        </group>
-      </group>
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -1.24, 0]}>
-        <planeGeometry args={[7, 5]} />
-        <meshStandardMaterial color="#1c150f" roughness={0.95} />
-      </mesh>
-    </>
-  )
-}
-
-function Plate3D() {
-  const group = useRef()
-  const cloche = useRef()
-  useFrame((state) => {
-    if (group.current) {
-      group.current.rotation.y = Math.sin(state.clock.elapsedTime * 0.3) * 0.16
-      group.current.rotation.x = -0.08 + Math.sin(state.clock.elapsedTime * 0.26) * 0.04
-    }
-    if (cloche.current) {
-      const t = Math.min(state.clock.elapsedTime / 2.2, 1)
-      cloche.current.position.y = THREE.MathUtils.lerp(0.35, 3.15, t)
-      cloche.current.material.opacity = 1 - t
-    }
-  })
-  return (
-    <>
-      <color attach="background" args={['#f4ead8']} />
-      <ambientLight intensity={0.8} />
-      <directionalLight position={[4, 5, 4]} intensity={2.2} castShadow />
-      <pointLight position={[-2, 2, 3]} intensity={1.2} color={terracottaLight} />
-      <group ref={group} position={[0, -0.4, 0]}>
-        <mesh castShadow receiveShadow rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[1.7, 1.85, 0.17, 80]} />
-          <meshStandardMaterial color="#fff7e7" roughness={0.56} metalness={0.05} />
-        </mesh>
-        <mesh position={[0, 0.12, 0]} rotation={[Math.PI / 2, 0, 0]}>
-          <torusGeometry args={[1.35, 0.018, 8, 80]} />
-          <meshStandardMaterial color={deepGreen} roughness={0.75} />
-        </mesh>
-        <HerbBundle position={[-0.3, 0.3, 0.08]} rotation={[0, 0, -0.2]} scale={0.42} />
-        <LemonSlice position={[0.42, 0.22, 0.1]} />
-        <TomatoGroup position={[0.68, 0.18, -0.35]} scale={0.25} />
-        <mesh ref={cloche} position={[0, 0.35, 0]} castShadow>
-          <sphereGeometry args={[1.75, 64, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
-          <meshStandardMaterial color="#d6c8ac" roughness={0.38} metalness={0.45} transparent opacity={0.7} side={THREE.DoubleSide} />
-        </mesh>
-      </group>
-      <mesh receiveShadow rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.58, 0]}>
-        <planeGeometry args={[7, 5]} />
-        <meshStandardMaterial color="#efe2cc" roughness={0.95} />
-      </mesh>
-    </>
-  )
-}
-
-function Conclusion3D() {
-  return (
-    <>
-      <color attach="background" args={['#15100b']} />
-      <ambientLight intensity={0.5} />
-      <pointLight position={[0, 2, 3]} color={terracottaLight} intensity={2.8} />
-      <directionalLight position={[3, 4, 5]} intensity={1.4} />
-      <Float speed={1.1} rotationIntensity={0.1} floatIntensity={0.35}>
-        <group scale={0.95} position={[0, -0.35, 0]}>
-          <Pot3D progress={1} />
-        </group>
-      </Float>
-    </>
   )
 }
 
