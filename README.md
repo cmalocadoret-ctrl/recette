@@ -1,28 +1,37 @@
-# Ansamble — Ma recette logistique 2025/2026
+# Ansamble · Recette logistique — V2 Premium
 
-Refonte complète du mini-site narratif premium.
+Nouvelle refonte complète, séparée des versions précédentes.
+
+## Ce qui change
+
+- Nouvelle architecture React + Vite + Three.js / React Three Fiber.
+- Vraies scènes 3D web : marmite, ingrédients, four, assiette.
+- Scroll narratif immersif, sans logique PowerPoint.
+- Thème clair, premium, culinaire.
+- Suppression de la mention “Ansamble 2030”.
+- Ingrédients cliquables : ils rejoignent la marmite dans la scène 3D.
+- Four et dressage refaits avec des volumes 3D plus sobres.
+- Photo du dressage intégrée comme texture dans une assiette 3D.
+- Build de production vérifié, dossier `dist/` inclus.
 
 ## Lancer en local
+
 ```bash
 npm install
 npm run dev
 ```
 
-## Déployer sur Vercel
-- Framework preset : Vite
-- Build command : `npm run build`
-- Output directory : `dist`
+## Build
 
-Le dossier `dist/` est inclus : un build a déjà été vérifié.
+```bash
+npm run build
+```
 
 ## Navigation
-- Boutons : Précédent, Suivant, Rejouer, Notes, Plein écran
-- Clavier : flèche droite / espace pour avancer, flèche gauche pour revenir, N pour les notes, F pour le plein écran, R pour rejouer
 
-## Refonte
-- Architecture neuve React + Vite + Three.js
-- Scènes plein écran successives
-- 3D recréée en WebGL : marmite, ingrédients, four, dressage final
-- Pas de photo pour la marmite, le four ou le dressage
-- Suppression des références affichées à “Ansamble 2030”
-- Responsive corrigé
+- Scroll naturel entre les sections.
+- Flèche bas / espace : section suivante.
+- Flèche haut : section précédente.
+- Touche `N` : notes orales.
+- Touche `F` : plein écran.
+- Touche `R` : retour au début.
